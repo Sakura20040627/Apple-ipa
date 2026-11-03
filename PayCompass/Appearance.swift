@@ -50,37 +50,30 @@ struct MerchantBadge: View {
     let merchant: Merchant
     var size: CGFloat = 48
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: size * 0.27).fill(Color(hex: merchant.color ?? "68717A").gradient)
-            if let icon = merchant.icon, !icon.isEmpty {
-                Text(icon).font(.system(size: icon.count > 4 ? size * 0.19 : size * 0.27, weight: .heavy, design: .rounded)).lineLimit(1).minimumScaleFactor(0.5).padding(5).foregroundStyle(.white)
-            } else { Image(systemName: categorySymbol).font(.system(size: size * 0.43)).foregroundStyle(.white) }
-        }.frame(width: size, height: size).accessibilityHidden(true)
+        Group {
+            if let asset = BrandAssets.image(for: merchant) {
+                Image(asset).resizable().scaledToFit().background(.white)
+            } else {
+                Image(systemName: "storefront.fill").resizable().scaledToFit().padding(size * 0.22).foregroundStyle(.secondary).background(.quaternary)
+            }
+        }.frame(width: size, height: size).clipShape(RoundedRectangle(cornerRadius: size * 0.22)).accessibilityHidden(true)
     }
-    private var categorySymbol: String {
-        switch merchant.category {
-        case "飲食": "fork.knife"
-        case "カフェ": "cup.and.saucer.fill"
-        case "スーパー": "cart.fill"
-        case "ドラッグストア": "cross.case.fill"
-        case "家電": "desktopcomputer"
-        default: "storefront.fill"
-        }
+}
+struct CardThumbnail: View {
+    @EnvironmentObject private var store: Store
+    let card: Card
+    var width: CGFloat = 64
+    var body: some View {
+        Image(card.kind == "amazon" ? (store.db.prime ? "CardAmazonPrime" : "CardAmazon") : (["CardPayPayBlack", "CardPayPayLavender", "CardPayPayBlue", "CardPayPayPink"].contains(card.artworkVariant ?? "") ? card.artworkVariant! : "CardPayPayBlack"))
+            .resizable().scaledToFit().frame(width: width).accessibilityLabel(card.name)
     }
 }
 struct CardArtwork: View {
     let card: Card
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack { Image(systemName: "wave.3.right").font(.title2); Spacer(); Text("櫻卡").font(.headline) }
-            Text(card.name).font(.title2.bold()).lineLimit(2).minimumScaleFactor(0.7)
-            HStack(alignment: .lastTextBaseline) {
-                VStack(alignment: .leading) { Text(L.t("基本還元", "基本回饋")).font(.caption); Text("\(card.rate, specifier: "%.1f")%").font(.system(.largeTitle, design: .rounded).bold()) }
-                Spacer()
-                Text(card.brands ?? "CARD").font(.caption.weight(.semibold)).multilineTextAlignment(.trailing)
-            }
-        }.padding(22).foregroundStyle(.white).frame(maxWidth: .infinity, minHeight: 190, alignment: .leading)
-        .background(LinearGradient(colors: [Color(hex: card.color ?? "CE447B"), Color(hex: card.color ?? "CE447B").mix(with: .black, by: 0.48)], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 26))
-        .overlay(alignment: .topTrailing) { Circle().stroke(.white.opacity(0.12), lineWidth: 35).frame(width: 130, height: 130).offset(x: 25, y: -55).clipped() }.clipShape(RoundedRectangle(cornerRadius: 26))
+        VStack(alignment: .leading, spacing: 16) {
+            CardThumbnail(card: card, width: 280).frame(maxWidth: .infinity)
+            Text(card.name).font(.title3.bold())
+        }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
     }
 }

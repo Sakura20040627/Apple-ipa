@@ -34,6 +34,7 @@ struct CompareView: View {
     @AppStorage("appTheme") private var theme = "sakura"
     @State private var amount = "5000"
     @State private var picker = false
+    @State private var conditions = false
     var merchant: Merchant? { store.db.merchants.first { $0.id == store.selectedMerchant } ?? Catalog.sorted(store.db.merchants).first }
     var yen: Int? { guard let n = Int(amount), (0...100_000_000).contains(n) else { return nil }; return n }
     var body: some View {
@@ -54,19 +55,20 @@ struct CompareView: View {
                     }.buttonStyle(.plain)
                     Divider()
                     HStack { Text("¥").font(.title).foregroundStyle(.secondary); TextField(L.t("購入金額", "消費金額"), text: $amount).keyboardType(.numberPad).font(.system(.largeTitle, design: .rounded).bold()).accessibilityLabel(L.t("購入金額、円", "消費金額，日圓")) }
-                    Text(L.t("税込の通常購入 · 最大1億円", "含稅一般消費 · 上限 1 億日圓")).font(.caption).foregroundStyle(.secondary)
+                    Button { conditions = true } label: { HStack { Text(store.purchaseContext.type.name); Spacer(); Image(systemName: "slider.horizontal.3") }.font(.subheadline) }
                 }.padding(20).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
                 if let merchant, let yen {
-                    let quotes = Calculator.quotes(store.db, merchant: merchant, amount: yen)
+                    let quotes = Calculator.quotes(store.db, merchant: merchant, amount: yen, context: store.purchaseContext)
                     if quotes.isEmpty { ContentUnavailableView(L.t("カードを追加", "新增卡片"), systemImage: "creditcard", description: Text(L.t("カードタブで所有カードを有効にしてください。", "請在卡片頁開啟你持有的卡片。"))) }
                     ForEach(Array(quotes.enumerated()), id: \.element.id) { index, quote in QuoteRow(quote: quote, recommended: index == 0) }
-                    Text(L.t("単一購入の参考値です。月間集計、端数、交換先、対象外商品で実際の付与は変わります。活動は最大1件。上限残額は手動更新です。決済可否は店頭でご確認ください。", "此為單筆消費估算。月結、進位規則、兌換方式與不適用商品會影響實際回饋。活動僅取最高一項，剩餘上限須手動更新。支付方式是否可用請向店家確認。")).font(.caption).foregroundStyle(.secondary)
+                    NavigationLink { CalculationInfoView() } label: { Label(L.t("計算について", "回饋如何計算"), systemImage: "info.circle").font(.caption) }
                 } else { Text(L.t("お店と有効な整数金額を入力してください。", "請選擇店鋪，並輸入有效的整數金額。")).foregroundStyle(.secondary) }
             }.padding(20)
         }.background(LinearGradient(colors: [(AppTheme(rawValue: theme) ?? .sakura).color.opacity(0.12), .clear], startPoint: .topLeading, endPoint: .bottomTrailing))
         .navigationTitle("櫻卡").navigationBarTitleDisplayMode(.inline)
         .scrollDismissesKeyboard(.interactively)
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink { CampaignsView() } label: { Image(systemName: "gift") }.accessibilityLabel(L.t("特典・活動", "優惠活動")) }; ToolbarItemGroup(placement: .keyboard) { Spacer(); Button(L.t("完了", "完成")) { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) } } }
+        .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button(L.t("完了", "完成")) { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) } } }
+        .sheet(isPresented: $conditions) { NavigationStack { PurchaseConditionsView() } }
         .sheet(isPresented: $picker) { NavigationStack { MerchantPicker { item in store.selectedMerchant = item.id; picker = false } } }
     }
 }
@@ -79,7 +81,7 @@ struct QuoteRow: View {
                 Label(recommended ? L.t("おすすめ · 同点の場合あり", "推薦 · 可能有同分卡片") : L.t("比較", "比較"), systemImage: recommended ? "sparkles" : "creditcard").font(.caption.bold())
                 Spacer(); Text("\(quote.rate, specifier: "%.1f")%").font(.headline)
             }.foregroundStyle(Color.accentColor)
-            HStack(spacing: 12) { RoundedRectangle(cornerRadius: 6).fill(Color(hex: quote.card.color ?? "CE447B").gradient).frame(width: 34, height: 23); Text(quote.card.name).font(.title3.bold()) }
+            HStack(spacing: 12) { CardThumbnail(card: quote.card, width: 60); Text(quote.card.name).font(.title3.bold()) }
             HStack(alignment: .firstTextBaseline) { Text("\(quote.total)").font(.system(.largeTitle, design: .rounded).bold()); Text(L.t("円相当 / 概算", "日圓等值／估算")).foregroundStyle(.secondary) }
             Text(L.t("通常 \(quote.base) + 活動 \(quote.bonus)", "基本 \(quote.base)＋活動 \(quote.bonus)")).font(.caption)
             Text(quote.reason).font(.footnote).foregroundStyle(.secondary)

@@ -15,6 +15,7 @@ struct BackupDocument: FileDocument {
     @Published var error: String?
     @Published var currentTab = 0
     @Published var selectedMerchant: UUID?
+    @Published var purchaseContext = PurchaseContext()
     private let url: URL
     init() {
         url = URL.documentsDirectory.appending(path: "paycompass.json")
@@ -32,6 +33,7 @@ struct BackupDocument: FileDocument {
     }
     func mergeCatalog() {
         let seed = Seed.database
+        Catalog.limitCards(&db)
         for card in seed.cards where !db.cards.contains(where: { $0.name == card.name }) { db.cards.append(card) }
         for i in db.cards.indices {
             if let template = seed.cards.first(where: { $0.name == db.cards[i].name }) {
@@ -63,7 +65,7 @@ struct BackupDocument: FileDocument {
     }
     static func decode(_ data: Data) throws -> Database {
         guard data.count <= 5_000_000 else { throw ValidationError.invalid }
-        let value = try JSONDecoder().decode(Database.self, from: data)
+        var value = try JSONDecoder().decode(Database.self, from: data)
         guard value.version == 1, value.cards.count <= 500, value.merchants.count <= 5000, value.campaigns.count <= 1000,
               Set(value.cards.map(\.id)).count == value.cards.count,
               Set(value.merchants.map(\.id)).count == value.merchants.count,
@@ -76,6 +78,7 @@ struct BackupDocument: FileDocument {
                   ((m.latitude == nil) == (m.longitude == nil))
               }),
               value.campaigns.allSatisfy({ c in value.cards.contains(where: { $0.id == c.cardID }) && value.merchants.contains(where: { $0.id == c.merchantID }) && c.bonus.isFinite && (0...100).contains(c.bonus) && (0...100000000).contains(c.cap) && c.start <= c.end }) else { throw ValidationError.invalid }
+        Catalog.limitCards(&value)
         return value
     }
     enum ValidationError: LocalizedError { case invalid; var errorDescription: String? { L.t("JSONの形式・範囲・参照IDが不正です（上限5MB）。", "JSON 格式、數值範圍或參照 ID 有誤（上限 5 MB）。") } }

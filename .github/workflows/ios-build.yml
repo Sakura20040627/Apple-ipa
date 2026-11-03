@@ -28,8 +28,11 @@ jobs:
           name: SakuraCard-unsigned-IPA
           path: build/output/PayCompass-unsigned.ipa
           retention-days: 7
-      - name: Run regression tests and capture simulator screens
-        run: bash scripts/cloud-test.sh
+      - name: Validate reward rules without simulator
+        run: |
+          mkdir -p build/output
+          swiftc -swift-version 5 -parse-as-library -target arm64-apple-macos26.0 PayCompass/Models.swift PayCompass/Catalog.swift PayCompass/Appearance.swift PayCompass/BrandAssets.swift PayCompass/RewardRules.swift PayCompass/Store.swift validation/main.swift -o build/validate
+          build/validate | tee build/output/core-validation.txt
       - name: Export signed IPA if signing secrets exist
         env:
           P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}

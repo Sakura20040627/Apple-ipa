@@ -1,0 +1,32 @@
+[
+  {
+    "name": "CardPayPayBlack",
+    "url": "https://www.paypay-card.co.jp/service/images/design/card_black_visa.png",
+    "sha256": "77bb1abf629caf8e5c2511e8955977321d5453a88c70f729063ad0a47c1b4c60"
+  },
+  {
+    "name": "CardPayPayLavender",
+    "url": "https://www.paypay-card.co.jp/service/images/design/card_lavender_visa.png",
+    "sha256": "185a8c01be1c2b2e518dc2eb4115dcf44bcc2eaeb1e3c9c3c3535d0a3b173808"
+  },
+  {
+    "name": "CardPayPayBlue",
+    "url": "https://www.paypay-card.co.jp/service/images/design/card_blue_visa.png",
+    "sha256": "004e9385f625df571ff1532f7948cf248e81bb9b8f6563012197a6681074eba1"
+  },
+  {
+    "name": "CardPayPayPink",
+    "url": "https://www.paypay-card.co.jp/service/images/design/card_pink_visa.png",
+    "sha256": "5cb29bbe2c9faa7e97c7cca29fe320fb086a52ebd59914a114005e06efc1dd49"
+  },
+  {
+    "name": "CardAmazon",
+    "url": "https://www.smbc-card.com/content/dam/smcc/jp/ja/card/amazon_noprime.png",
+    "sha256": "7c462ddad8c2e19478a530426862badf950603ec1cccbe1b61925ca6dbe53806"
+  },
+  {
+    "name": "CardAmazonPrime",
+    "url": "https://www.smbc-card.com/content/dam/smcc/jp/ja/card/amazon_prime.png",
+    "sha256": "0630e937f300141c42c929d7ad092ec1353f46ca9d72557a313b3546d2634e04"
+  }
+]

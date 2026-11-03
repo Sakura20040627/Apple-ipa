@@ -2,7 +2,6 @@ import SwiftUI
 
 struct CardsView: View {
     @EnvironmentObject private var store: Store
-    @State private var editing: Card?
     @State private var query = ""
     @State private var ownedOnly = false
     var results: [Card] { store.db.cards.filter { (!ownedOnly || $0.owned) && (query.isEmpty || ($0.name + " " + ($0.issuer ?? "") + " " + ($0.brands ?? "") + " " + ($0.pointsName ?? "")).localizedStandardContains(query)) } }
@@ -23,16 +22,13 @@ struct CardsView: View {
                 Text(L.t("カード番号・有効期限・セキュリティコードは保存しません。", "不會儲存卡號、有效期限或安全碼。")).font(.caption).foregroundStyle(.secondary)
             }.padding(20)
         }.navigationTitle(L.t("カード", "我的卡片")).searchable(text: $query, prompt: L.t("カード・発行会社・ブランド", "卡名、發卡機構、國際組織"))
-        .toolbar { Button(L.t("追加", "新增"), systemImage: "plus") { editing = Card(name: "", rate: 1, unit: 100, source: "", note: L.t("ユーザー設定", "使用者自訂")) } }
-        .sheet(item: $editing) { CardEditor(card: $0) }
+
     }
 }
 struct CardDetail: View {
     @EnvironmentObject private var store: Store
     @Environment(\.dismiss) private var dismiss
     let cardID: UUID
-    @State private var editing: Card?
-    @State private var deletion = false
     var card: Card? { store.db.cards.first { $0.id == cardID } }
     var body: some View {
         Group {
@@ -52,42 +48,15 @@ struct CardDetail: View {
                         Text(L.t("ポイント価値は円相当の概算。年会費・年間ボーナスは購入ごとの比較から除外しています。", "積分以日圓等值概算。單筆比較未扣除年費，也未計入年度消費獎勵。")).font(.caption).foregroundStyle(.secondary)
                         SafeLink(url: c.source)
                     }
-                    Section { Button(L.t("カードを削除", "刪除此卡"), role: .destructive) { deletion = true } }
-                }.toolbar { Button(L.t("編集", "編輯")) { editing = c } }
+                    Section {
+                        NavigationLink { VerifiedOffersView(kind: c.kind) } label: { Label(L.t("還元・キャンペーンの詳細", "回饋與優惠活動"), systemImage: "list.bullet.rectangle") }
+                        NavigationLink { RewardPreferencesView() } label: { Label(L.t("還元資格の設定", "設定回饋資格"), systemImage: "checkmark.shield") }
+                        if c.kind == "paypay" { NavigationLink { CardDesignView(cardID: c.id) } label: { Label(L.t("カードデザイン", "卡面款式"), systemImage: "photo") } }
+                    }
+                }
             } else { ContentUnavailableView(L.t("カードがありません", "卡片已不存在"), systemImage: "creditcard") }
         }.navigationTitle(card?.name ?? "").navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $editing) { CardEditor(card: $0) }
-        .confirmationDialog(L.t("関連する活動も削除します。", "相關優惠活動也會一併刪除。"), isPresented: $deletion, titleVisibility: .visible) { Button(L.t("削除", "刪除"), role: .destructive) { store.deleteCard(cardID); dismiss() } }
-    }
-}
-struct CardEditor: View {
-    @EnvironmentObject private var store: Store
-    @Environment(\.dismiss) private var dismiss
-    @State var card: Card
-    var body: some View {
-        NavigationStack { Form {
-            Section(L.t("基本情報", "基本資料")) {
-                TextField(L.t("名称", "卡名"), text: $card.name)
-                Toggle(L.t("所有している", "我持有此卡"), isOn: $card.owned)
-                TextField(L.t("基本還元率 %", "基本回饋率 %"), value: $card.rate, format: .number).keyboardType(.decimalPad)
-                TextField(L.t("計算単位 円", "計算單位（日圓）"), value: $card.unit, format: .number).keyboardType(.numberPad)
-            }
-            Section(L.t("カードの詳細", "卡片詳細資料")) {
-                TextField(L.t("発行会社", "發卡機構"), text: optional($card.issuer)); TextField(L.t("ポイント名称", "積分名稱"), text: optional($card.pointsName)); TextField(L.t("国際ブランド", "國際組織"), text: optional($card.brands))
-                TextField(L.t("年会費（日本語）", "年費（日文）"), text: optional($card.annualFee)); TextField(L.t("年会費（繁体字）", "年費（繁體中文）"), text: optional($card.annualFeeZH))
-                TextField(L.t("詳細（日本語）", "詳細說明（日文）"), text: optional($card.details), axis: .vertical); TextField(L.t("詳細（繁体字）", "詳細說明（繁體中文）"), text: optional($card.detailsZH), axis: .vertical)
-                Picker(L.t("カードの色", "卡片顏色"), selection: Binding(get: { card.color ?? "CE447B" }, set: { card.color = $0 })) {
-                    ForEach(["CE447B", "217CC2", "14856D", "7961CE", "A56B09", "C34C3E", "475DA4", "68717A", "D34A57", "3E4F65", "B74365", "4C688D", "267265", "A08036", "91469C", "B44149", "446A9B", "BD3443", "C06D24", "45515D"], id: \.self) { value in Label(value, systemImage: "circle.fill").foregroundStyle(Color(hex: value)).tag(value) }
-                }
-            }
-            Section(L.t("条件と出典", "條件與來源")) {
-                TextField(L.t("公式URL", "官方網址"), text: $card.source).keyboardType(.URL).textInputAutocapitalization(.never)
-                TextField(L.t("計算メモ（日本語）", "計算備註（日文）"), text: $card.note, axis: .vertical)
-                TextField(L.t("計算メモ（繁体字）", "計算備註（繁體中文）"), text: optional($card.noteZH), axis: .vertical)
-                SafeLink(url: card.source)
-                if card.kind != "custom" { Text(L.t("Amazon・PayPayの条件設定が別途適用されます。", "Amazon 與 PayPay 的條件設定仍會另外套用。")).font(.caption) }
-            }
-        }.navigationTitle(L.t("カードを編集", "編輯卡片")).toolbar { ToolbarItem(placement: .cancellationAction) { Button(L.t("取消", "取消")) { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button(L.t("保存", "儲存")) { if let i = store.db.cards.firstIndex(where: { $0.id == card.id }) { store.db.cards[i] = card } else { store.db.cards.append(card) }; dismiss() }.disabled(card.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !card.rate.isFinite || !(0...100).contains(card.rate) || !(1...100000).contains(card.unit)) } } }
+
     }
 }
 struct CampaignsView: View {
@@ -96,7 +65,7 @@ struct CampaignsView: View {
     var body: some View {
         List {
             Section(L.t("公式の最新情報", "官方最新資訊")) {
-                Link(L.t("PayPay Card のキャンペーン", "PayPay Card 優惠活動"), destination: URL(string: "https://www.paypay-card.co.jp/campaign/")!)
+                Link(L.t("PayPay Card のキャンペーン", "PayPay Card 優惠活動"), destination: URL(string: "https://www.paypay-card.co.jp/event/")!)
                 Link(L.t("Amazon Mastercard の特典", "Amazon Mastercard 優惠"), destination: URL(string: "https://www.smbc-card.com/nyukai/affiliate/amazon/index.jsp")!)
             }
             Section(L.t("確認済みの活動", "已確認的活動")) {

@@ -17,10 +17,10 @@ final class CalculatorTests: XCTestCase {
         let now = Date()
         let c = db.cards[1], m = db.merchants[1]
         db.campaigns = [Campaign(title: "Test", cardID: c.id, merchantID: m.id, bonus: 5, cap: 20, start: now.addingTimeInterval(-60), end: now.addingTimeInterval(60), enabled: true, source: "", note: "")]
-        XCTAssertEqual(Calculator.quotes(db, merchant: m, amount: 1000, date: now).first?.total, 30)
+        XCTAssertEqual(Calculator.quotes(db, merchant: m, amount: 1000, date: now).first?.total, 35)
         db.campaigns.append(db.campaigns[0])
-        XCTAssertEqual(Calculator.quotes(db, merchant: m, amount: 1000, date: now).first?.total, 30)
-        XCTAssertEqual(Calculator.quotes(db, merchant: m, amount: 1000, date: now.addingTimeInterval(120)).first?.total, 10)
+        XCTAssertEqual(Calculator.quotes(db, merchant: m, amount: 1000, date: now).first?.total, 35)
+        XCTAssertEqual(Calculator.quotes(db, merchant: m, amount: 1000, date: now.addingTimeInterval(120)).first?.total, 15)
         XCTAssertEqual(Calculator.quotes(db, merchant: m, amount: -1).first?.total, 0)
     }
     @MainActor func testImportValidationAndRoundTrip() async throws {
@@ -36,7 +36,7 @@ final class CalculatorTests: XCTestCase {
     }
     func testCatalogAndFavoriteSearch() {
         let db = Seed.database
-        XCTAssertEqual(db.cards.count, 12)
+        XCTAssertEqual(db.cards.count, 2)
         XCTAssertEqual(Set(db.cards.map(\.name)).count, db.cards.count)
         XCTAssertGreaterThan(db.merchants.count, 60)
         let family = db.merchants.first { $0.name == "ファミリーマート" }!

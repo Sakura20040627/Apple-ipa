@@ -1,38 +1,18 @@
 import Foundation
 
 enum Catalog {
-    static let revision = 2
+    static let revision = 3
     static func enrich(_ db: inout Database) {
 if let i = db.cards.firstIndex(where: { $0.name == "PayPay Card" }) {
             db.cards[i].issuer = "PayPayカード"; db.cards[i].pointsName = "PayPayポイント"; db.cards[i].brands = "Visa / Mastercard / JCB"; db.cards[i].color = "D34A57"
             db.cards[i].annualFee = "永年無料"; db.cards[i].annualFeeZH = "永久免年費"
-            db.cards[i].noteZH = "需完成 PayPay App 登錄與身分驗證；一般消費以 200 日圓為單位，未計 PayPay Step 加碼。"; db.cards[i].details = db.cards[i].note; db.cards[i].detailsZH = "需完成 PayPay App 登錄與身分驗證；一般消費以 200 日圓為單位，未計 PayPay Step 加碼。"
+            db.cards[i].noteZH = "一般消費 1%；確認當期 PayPay Step 資格可加 0.5%。公共費用與稅金基本 0.5%，儲值等部分交易不計點。需完成 PayPay 信用支付設定與身分驗證。"; db.cards[i].details = db.cards[i].kind == "amazon" ? "一般店1%、Amazon 1.5〜2%、対象コンビニ3社1.5%。セブンのApple Pay Mastercardタッチは最大7%。iD・現物タッチ・たばこ加算対象外。" : "通常1%、適用月のPayPayステップ達成で+0.5%。公共料金・税金の基本は0.5%。チャージ等は対象外。クレジット設定と本人確認が必要。"; db.cards[i].detailsZH = "一般消費 1%；確認當期 PayPay Step 資格可加 0.5%。公共費用與稅金基本 0.5%，儲值等部分交易不計點。需完成 PayPay 信用支付設定與身分驗證。"
         }
 if let i = db.cards.firstIndex(where: { $0.name == "Amazon Mastercard" }) {
             db.cards[i].issuer = "三井住友カード"; db.cards[i].pointsName = "Amazonポイント"; db.cards[i].brands = "Mastercard"; db.cards[i].color = "3E4F65"
             db.cards[i].annualFee = "永年無料"; db.cards[i].annualFeeZH = "永久免年費"
-            db.cards[i].noteZH = "一般店鋪 1%；Amazon 一般購物 Prime 2%、非 Prime 1.5%。便利商店等條件式加碼需另外確認。"; db.cards[i].details = db.cards[i].note; db.cards[i].detailsZH = "一般店鋪 1%；Amazon 一般購物 Prime 2%、非 Prime 1.5%。便利商店等條件式加碼需另外確認。"
+            db.cards[i].noteZH = "一般店鋪 1%；Amazon 一般購物 Prime 2%、非 Prime 1.5%；7‑Eleven／全家／LAWSON 1.5%。7‑Eleven 的 Apple Pay Mastercard 感應支付最高 7%，菸品、iD 與實體卡感應不適用額外 5.5%。"; db.cards[i].details = db.cards[i].kind == "amazon" ? "一般店1%、Amazon 1.5〜2%、対象コンビニ3社1.5%。セブンのApple Pay Mastercardタッチは最大7%。iD・現物タッチ・たばこ加算対象外。" : "通常1%、適用月のPayPayステップ達成で+0.5%。公共料金・税金の基本は0.5%。チャージ等は対象外。クレジット設定と本人確認が必要。"; db.cards[i].detailsZH = "一般店鋪 1%；Amazon 一般購物 Prime 2%、非 Prime 1.5%；7‑Eleven／全家／LAWSON 1.5%。7‑Eleven 的 Apple Pay Mastercard 感應支付最高 7%，菸品、iD 與實體卡感應不適用額外 5.5%。"
         }
-if let i = db.cards.firstIndex(where: { $0.name == "楽天カード" }) {
-            db.cards[i].issuer = "楽天カード"; db.cards[i].pointsName = "楽天ポイント"; db.cards[i].brands = "Visa / Mastercard / JCB / American Express"; db.cards[i].color = "B74365"
-            db.cards[i].annualFee = "永年無料"; db.cards[i].annualFeeZH = "永久免年費"
-            db.cards[i].noteZH = "一般購物每 100 日圓 1 點；公共費用、稅金等部分交易回饋不同。"; db.cards[i].details = db.cards[i].note; db.cards[i].detailsZH = "一般購物每 100 日圓 1 點；公共費用、稅金等部分交易回饋不同。"
-        }
-if let i = db.cards.firstIndex(where: { $0.name == "JCB CARD W" }) {
-            db.cards[i].issuer = "JCB"; db.cards[i].pointsName = "J-POINT"; db.cards[i].brands = "JCB"; db.cards[i].color = "4C688D"
-            db.cards[i].annualFee = "永年無料"; db.cards[i].annualFeeZH = "永久免年費"
-            db.cards[i].noteZH = "每月總額以 200 日圓為單位、2 J-POINT；每點最高 1 日圓，此處為單筆概算。"; db.cards[i].details = db.cards[i].note; db.cards[i].detailsZH = "每月總額以 200 日圓為單位、2 J-POINT；每點最高 1 日圓，此處為單筆概算。"
-        }
-        db.cards += [
-Card(name: "三井住友カード（NL）", rate: 0.5, unit: 200, owned: false, source: "https://www.smbc-card.com/nyukai/card/numberless.jsp", note: "スマホタッチの対象店優遇は条件付き。通常購入のみ計算。", issuer: "三井住友カード", pointsName: "Vポイント", annualFee: "永年無料", annualFeeZH: "永久免年費", brands: "Visa / Mastercard", details: "スマホタッチの対象店優遇は条件付き。通常購入のみ計算。", detailsZH: "指定店手機感應加碼有條件，這裡僅計算一般購物。", noteZH: "指定店手機感應加碼有條件，這裡僅計算一般購物。", color: "267265"),
-Card(name: "三井住友カード ゴールド（NL）", rate: 0.5, unit: 200, owned: false, source: "https://www.smbc-card.com/mem/update/pop/hikaku_proper.jsp", note: "年間利用ボーナス・年会費無料条件は自動計算しません。", issuer: "三井住友カード", pointsName: "Vポイント", annualFee: "5,500円 / 条件達成で翌年以降無料", annualFeeZH: "5,500 日圓／達成條件後次年起免年費", brands: "Visa / Mastercard", details: "年間利用ボーナス・年会費無料条件は自動計算しません。", detailsZH: "年度消費獎勵、免年費條件不會自動計算。", noteZH: "年度消費獎勵、免年費條件不會自動計算。", color: "A08036"),
-Card(name: "イオンカード（WAON一体型）", rate: 0.5, unit: 200, owned: false, source: "https://www.aeon.co.jp/point/", note: "対象イオングループの2倍特典・割引日は別条件。基本分のみ計算。", issuer: "イオン銀行", pointsName: "WAON POINT", annualFee: "永年無料", annualFeeZH: "永久免年費", brands: "Visa / Mastercard / JCB", details: "対象イオングループの2倍特典・割引日は別条件。基本分のみ計算。", detailsZH: "AEON 集團指定店雙倍點數與折扣日另有條件，僅計基本回饋。", noteZH: "AEON 集團指定店雙倍點數與折扣日另有條件，僅計基本回饋。", color: "91469C"),
-Card(name: "エポスカード", rate: 0.5, unit: 200, owned: false, source: "https://faq.eposcard.co.jp/faq/show/63", note: "200円単位。マルイ・モディの優遇、会員限定割引は別条件。", issuer: "エポスカード", pointsName: "エポスポイント", annualFee: "永年無料", annualFeeZH: "永久免年費", brands: "Visa", details: "200円単位。マルイ・モディの優遇、会員限定割引は別条件。", detailsZH: "每 200 日圓計點，丸井及 MODI 等優待另有條件。", noteZH: "每 200 日圓計點，丸井及 MODI 等優待另有條件。", color: "B44149"),
-Card(name: "リクルートカード", rate: 1.2, unit: 1, owned: false, source: "https://recruit-card.jp/point/", note: "月間利用額×1.2%で集計。単一購入の概算です。チャージ等の例外あり。", issuer: "三菱UFJニコス / JCB", pointsName: "リクルートポイント", annualFee: "永年無料", annualFeeZH: "永久免年費", brands: "Visa / Mastercard / JCB", details: "月間利用額×1.2%で集計。単一購入の概算です。チャージ等の例外あり。", detailsZH: "按每月消費總額 ×1.2% 計點，此處為單筆概算；儲值等交易有例外。", noteZH: "按每月消費總額 ×1.2% 計點，此處為單筆概算；儲值等交易有例外。", color: "446A9B"),
-Card(name: "dカード", rate: 1, unit: 100, owned: false, source: "https://dcard.docomo.ne.jp/st/dpoint_points/shopping/index.html", note: "一般購入100円単位。公共料金等は別率。2027年1月の制度改定に注意。", issuer: "NTTドコモ", pointsName: "dポイント", annualFee: "公式サイトの最新条件を確認", annualFeeZH: "請查閱官方最新年費條件", brands: "Visa / Mastercard", details: "一般購入100円単位。公共料金等は別率。2027年1月の制度改定に注意。", detailsZH: "一般購物每 100 日圓計點，公共費用等比例不同；請留意 2027 年 1 月制度變更。", noteZH: "一般購物每 100 日圓計點，公共費用等比例不同；請留意 2027 年 1 月制度變更。", color: "BD3443"),
-Card(name: "au PAY カード", rate: 1, unit: 100, owned: false, source: "https://www.kddi-fs.com/merit/point/", note: "100円単位。au PAY残高チャージ等の対象外取引を除く。", issuer: "auフィナンシャルサービス", pointsName: "Pontaポイント", annualFee: "公式サイトの最新条件を確認", annualFeeZH: "請查閱官方最新年費條件", brands: "Visa / Mastercard", details: "100円単位。au PAY残高チャージ等の対象外取引を除く。", detailsZH: "每 100 日圓計點；不包含 au PAY 餘額儲值等不適用交易。", noteZH: "每 100 日圓計點；不包含 au PAY 餘額儲值等不適用交易。", color: "C06D24"),
-Card(name: "Orico Card THE POINT", rate: 1, unit: 100, owned: false, source: "https://www.orico.co.jp/creditcard/list/thepoint/", note: "通常1%。入会後6か月の加算・上限は別管理。", issuer: "オリエントコーポレーション", pointsName: "オリコポイント", annualFee: "永年無料", annualFeeZH: "永久免年費", brands: "Mastercard / JCB", details: "通常1%。入会後6か月の加算・上限は別管理。", detailsZH: "一般回饋 1%；新戶前六個月加碼與上限需另外管理。", noteZH: "一般回饋 1%；新戶前六個月加碼與上限需另外管理。", color: "45515D")
-        ]
         let shops = [
 Merchant(name: "Amazon.co.jp", category: "オンライン", aliases: "amazon 亞馬遜 アマゾン", icon: "a", color: "393F49"),
 Merchant(name: "セブン‐イレブン", category: "コンビニ", aliases: "7 eleven seven セブンイレブン 7-11 小七", icon: "7", color: "BD5128"),
@@ -105,6 +85,23 @@ Merchant(name: "大丸", category: "百貨店", aliases: "daimaru 大丸", icon:
                 db.merchants[i].category = shop.category
             } else { db.merchants.append(shop) }
         }
+    }
+    static func limitCards(_ db: inout Database) {
+        let seed = Seed.database.cards
+        var kept: [Card] = []
+        for template in seed {
+            var card = db.cards.first(where: { $0.kind == template.kind || $0.name == template.name }) ?? template
+            card.name = template.name; card.kind = template.kind
+            card.rate = template.rate; card.unit = template.unit
+            card.source = template.source; card.note = template.note; card.noteZH = template.noteZH
+            card.details = template.details; card.detailsZH = template.detailsZH
+            card.issuer = template.issuer; card.pointsName = template.pointsName
+            card.brands = template.brands; card.annualFee = template.annualFee; card.annualFeeZH = template.annualFeeZH
+            kept.append(card)
+        }
+        db.cards = kept
+        let ids = Set(kept.map(\.id))
+        db.campaigns.removeAll { !ids.contains($0.cardID) }
     }
     static func matches(_ merchant: Merchant, query: String) -> Bool {
         query.isEmpty || (merchant.name + " " + merchant.category + " " + L.category(merchant.category) + " " + (merchant.aliases ?? "") + " " + (merchant.address ?? "")).localizedStandardContains(query)

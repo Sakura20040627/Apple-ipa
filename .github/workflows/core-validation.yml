@@ -17,7 +17,7 @@ jobs:
       - name: Run native Swift regression checks without simulator
         run: |
           mkdir -p build/core
-          swiftc -swift-version 5 -parse-as-library -target arm64-apple-macos26.0 PayCompass/Models.swift PayCompass/Catalog.swift PayCompass/Appearance.swift PayCompass/Store.swift validation/main.swift -o build/core/validate
+          swiftc -swift-version 5 -parse-as-library -target arm64-apple-macos26.0 PayCompass/Models.swift PayCompass/Catalog.swift PayCompass/Appearance.swift PayCompass/BrandAssets.swift PayCompass/RewardRules.swift PayCompass/Store.swift validation/main.swift -o build/core/validate
           build/core/validate | tee build/core/results.txt
       - uses: actions/upload-artifact@v4
         if: always()
