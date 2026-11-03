@@ -337,10 +337,10 @@
   },
   {
     "name": "松屋",
-    "page": "https://commons.wikimedia.org/wiki/File:Logo_of_matsuyafoods.png",
+    "page": "https://www.matsuyafoods.com.hk/",
     "monogram": "松屋",
     "asset": "Brand_28",
-    "url": "https://upload.wikimedia.org/wikipedia/commons/d/d9/Logo_of_matsuyafoods.png",
+    "url": "https://www.matsuyafoods.com.hk/zh-hant/img/logo_matsuya.png?1778039531",
     "sha256": "35212aeda60aa740cf13e1e4b05f193fe7260714f4d0fb353d5667e9ddc80b62"
   },
   {
@@ -562,8 +562,8 @@
   {
     "name": "ココカラファイン",
     "asset": "Brand_47",
-    "page": "https://www.matsukiyococokara-online.com/",
-    "url": "https://www.matsukiyococokara-online.com/favicon.ico",
+    "page": "https://tsuminami.aeonmall.jp/shop/38e0e462-b90b-4bef-9677-6378087fdc7f",
+    "url": "https://image-cdn.aeonmall.jp/uploads/09eb76da-1634-4b29-862e-ee23f8bc299c.png",
     "monogram": "coco",
     "sha256": "3af319d307ebd3da340140662e66536ec5f3a816d3b7f452ddbd7c191b65823c",
     "size": [
