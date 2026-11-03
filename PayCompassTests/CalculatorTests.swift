@@ -34,4 +34,33 @@ final class CalculatorTests: XCTestCase {
         XCTAssertThrowsError(try Store.decode(JSONEncoder().encode(invalid)))
         XCTAssertThrowsError(try Store.decode(Data("{}".utf8)))
     }
+    func testCatalogAndFavoriteSearch() {
+        let db = Seed.database
+        XCTAssertEqual(db.cards.count, 12)
+        XCTAssertEqual(Set(db.cards.map(\.name)).count, db.cards.count)
+        XCTAssertGreaterThan(db.merchants.count, 60)
+        let family = db.merchants.first { $0.name == "ファミリーマート" }!
+        XCTAssertTrue(Catalog.matches(family, query: "全家"))
+        XCTAssertTrue(Catalog.matches(family, query: "FamilyMart"))
+        var merchants = Array(db.merchants.prefix(3))
+        merchants[2].favorite = true
+        XCTAssertEqual(Catalog.sorted(merchants).first?.id, merchants[2].id)
+        XCTAssertEqual(Catalog.sorted(merchants)[1].id, merchants[0].id)
+    }
+    @MainActor func testLegacyBackupAndCoordinates() throws {
+        let db = Seed.database
+        let encoded = try JSONEncoder().encode(db)
+        var object = try JSONSerialization.jsonObject(with: encoded) as! [String: Any]
+        let cardKeys: Set<String> = ["id", "name", "rate", "unit", "owned", "source", "note", "kind"]
+        let merchantKeys: Set<String> = ["id", "name", "category", "key", "note"]
+        object["cards"] = (object["cards"] as! [[String: Any]]).map { $0.filter { cardKeys.contains($0.key) } }
+        object["merchants"] = (object["merchants"] as! [[String: Any]]).map { $0.filter { merchantKeys.contains($0.key) } }
+        let legacy = try Store.decode(JSONSerialization.data(withJSONObject: object))
+        XCTAssertEqual(legacy.cards[0].name, db.cards[0].name)
+        XCTAssertNil(legacy.merchants[0].favorite)
+        var invalid = db
+        invalid.merchants[0].latitude = 999
+        invalid.merchants[0].longitude = 135
+        XCTAssertThrowsError(try Store.decode(JSONEncoder().encode(invalid)))
+    }
 }
