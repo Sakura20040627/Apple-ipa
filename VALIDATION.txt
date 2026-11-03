@@ -1,0 +1,5 @@
+静态验证记录 — 2026-11-03
+环境：Linux，无 Xcode / Swift / Apple SDK。
+通过：Xcode project 所有对象 ID 唯一，引用闭合；源文件存在且加入 build phase；共享 scheme XML 可解析；所有 JSON 可解析；1024×1024 RGB 原创 AppIcon 存在；示例 JSON 与模型字段对齐；文档公式独立边界检查。
+未执行：Swift 编译、XCTest、模拟器 UI、真机、签名、归档和 IPA 导出。
+附带的 XCTest 覆盖 Prime/PayPay条件、端数、活动过期/上限/不叠加、JSON往返与非法输入。请在 Xcode 26 中运行。

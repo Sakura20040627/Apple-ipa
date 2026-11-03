@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "cards": [
+    {
+      "id": "01083002-2e98-4a84-befa-a968412df11f",
+      "name": "PayPay Card",
+      "rate": 1,
+      "unit": 200,
+      "owned": true,
+      "source": "https://www.paypay-card.co.jp/service/000263.html",
+      "note": "アプリ登録・本人確認必須",
+      "kind": "paypay"
+    },
+    {
+      "id": "cb594bda-f0b8-45e8-bb1c-a7fc604a9e0d",
+      "name": "Amazon Mastercard",
+      "rate": 1,
+      "unit": 100,
+      "owned": true,
+      "source": "https://www.smbc-card.com/nyukai/affiliate/amazon/index.jsp",
+      "note": "通常購入",
+      "kind": "amazon"
+    }
+  ],
+  "merchants": [
+    {
+      "id": "d4470416-7d48-40e3-b462-6c7d8b95cfc6",
+      "name": "Amazon.co.jp",
+      "category": "オンライン",
+      "key": "amazon",
+      "note": "通常購入"
+    }
+  ],
+  "campaigns": [],
+  "prime": false,
+  "paypayEligible": false
+}

@@ -1,0 +1,46 @@
+name: Build Pay Compass IPA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, paycompass-cloud-build]
+    paths:
+      - 'PayCompass/**'
+      - 'PayCompassTests/**'
+      - 'PayCompass.xcodeproj/**'
+      - 'scripts/**'
+      - '.github/workflows/ios-build.yml'
+permissions:
+  contents: read
+concurrency:
+  group: paycompass-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build device archive and unsigned IPA
+        run: bash scripts/cloud-build.sh
+      - name: Export signed IPA if signing secrets exist
+        env:
+          P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+          EXPORT_METHOD: ${{ secrets.IOS_EXPORT_METHOD }}
+        run: |
+          if [ -n "$P12_BASE64" ] && [ -n "$PROFILE_BASE64" ] && [ -n "$TEAM_ID" ] && [ -n "$BUNDLE_ID" ]; then
+            bash scripts/cloud-sign.sh
+          else
+            echo 'Signing secrets absent: unsigned IPA only.' >> build/output/UNSIGNED.txt
+          fi
+      - name: Upload IPA and build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PayCompass-iOS-device
+          path: build/output/
+          if-no-files-found: warn
+          retention-days: 7
