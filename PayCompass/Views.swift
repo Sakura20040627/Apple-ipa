@@ -23,6 +23,7 @@ struct RootView: View {
         #endif
         .id(language)
         .tint((AppTheme(rawValue: theme) ?? .sakura).color)
+        .accentColor((AppTheme(rawValue: theme) ?? .sakura).color)
         .environment(\.locale, Locale(identifier: language == "system" ? (L.isChinese ? "zh-Hant" : "ja") : language))
         .preferredColorScheme(scheme == "dark" ? .dark : scheme == "light" ? .light : nil)
         .alert(L.t("お知らせ", "通知"), isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button(L.t("閉じる", "關閉")) { store.error = nil } } message: { Text(store.error ?? "") }

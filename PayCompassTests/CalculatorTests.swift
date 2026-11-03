@@ -23,7 +23,7 @@ final class CalculatorTests: XCTestCase {
         XCTAssertEqual(Calculator.quotes(db, merchant: m, amount: 1000, date: now.addingTimeInterval(120)).first?.total, 10)
         XCTAssertEqual(Calculator.quotes(db, merchant: m, amount: -1).first?.total, 0)
     }
-    @MainActor func testImportValidationAndRoundTrip() throws {
+    @MainActor func testImportValidationAndRoundTrip() async throws {
         let db = Seed.database
         let data = try JSONEncoder().encode(db)
         XCTAssertEqual(try Store.decode(data).cards, db.cards)
@@ -47,7 +47,7 @@ final class CalculatorTests: XCTestCase {
         XCTAssertEqual(Catalog.sorted(merchants).first?.id, merchants[2].id)
         XCTAssertEqual(Catalog.sorted(merchants)[1].id, merchants[0].id)
     }
-    @MainActor func testLegacyBackupAndCoordinates() throws {
+    @MainActor func testLegacyBackupAndCoordinates() async throws {
         let db = Seed.database
         let encoded = try JSONEncoder().encode(db)
         var object = try JSONSerialization.jsonObject(with: encoded) as! [String: Any]
