@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
-    runs-on: macos-26
+    runs-on: macos-26-intel
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +31,7 @@ jobs:
       - name: Validate reward rules without simulator
         run: |
           mkdir -p build/output
-          swiftc -swift-version 5 -parse-as-library -target arm64-apple-macos26.0 PayCompass/Models.swift PayCompass/Catalog.swift PayCompass/Appearance.swift PayCompass/BrandAssets.swift PayCompass/RewardRules.swift PayCompass/Store.swift validation/main.swift -o build/validate
+          swiftc -swift-version 5 -parse-as-library -target "$(uname -m)-apple-macos26.0" PayCompass/Models.swift PayCompass/Catalog.swift PayCompass/Appearance.swift PayCompass/BrandAssets.swift PayCompass/RewardRules.swift PayCompass/Store.swift validation/main.swift -o build/validate
           build/validate | tee build/output/core-validation.txt
       - name: Export signed IPA if signing secrets exist
         env:
