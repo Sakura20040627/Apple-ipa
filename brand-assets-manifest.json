@@ -5,11 +5,7 @@
     "page": "https://www.amazon.co.jp/",
     "url": "https://www.amazon.co.jp/favicon.ico",
     "monogram": "a",
-    "sha256": "5866636f18764cd66366ae6eb682e972b4eae1771512cd76b304b6dd3c0f1d2d",
-    "size": [
-      48,
-      48
-    ]
+    "assetSHA256": "7bfbdce4602ad44a6af5935afab0319c33d49c16cc4004533b7f284932d019e0"
   },
   {
     "name": "セブン‐イレブン",
@@ -17,11 +13,7 @@
     "page": "https://www.sej.co.jp/",
     "url": "https://www.sej.co.jp/favicon.ico?dummy=1768465757",
     "monogram": "7",
-    "sha256": "6d43d787d40cd31fcac63af6123e40946224a75b1d8f851456441638efcb2fa4",
-    "size": [
-      32,
-      32
-    ]
+    "assetSHA256": "bbbd687efb02fd89263f64c9977e529fd8f42755fc8149d50f0a6b58169340e4"
   },
   {
     "name": "ローソン",
@@ -29,11 +21,7 @@
     "page": "https://www.lawson.co.jp/",
     "url": "https://www.lawson.co.jp/favicon.ico",
     "monogram": "LAWSON",
-    "sha256": "bc33dae96c484c9434dd15d48937f0a2baa2d04cfff57872a28ee7075b5a24b1",
-    "size": [
-      48,
-      48
-    ]
+    "assetSHA256": "705260ce67729c3126fb066d55ef7936684edc2e88564ea16e2cfc18b268a367"
   },
   {
     "name": "ファミリーマート",
@@ -41,11 +29,7 @@
     "page": "https://www.family.co.jp/",
     "url": "https://www.family.co.jp/content/dam/img/apple-touch-icon-precomposed.png",
     "monogram": "FM",
-    "sha256": "26826502d9cfcdf43c81b31d8d17c75acc4417aba267120bdffd42a026fba7bf",
-    "size": [
-      144,
-      144
-    ]
+    "assetSHA256": "8944224f4e7f8c4904119c241611ebe223ce87190dac3a649d8b6c2a46d0e4f3"
   },
   {
     "name": "すき家",
@@ -53,11 +37,7 @@
     "page": "https://www.sukiya.jp/",
     "url": "https://news.sukiya.jp/common/img/favicon.png",
     "monogram": "すき家",
-    "sha256": "6aa2f11d69c8c8018e570e7807a40a2a40fef5cbde5e125292e3873986248c63",
-    "size": [
-      30,
-      25
-    ]
+    "assetSHA256": "bd8db8f97ac3836b96dd984d9627a61996829577a6e6a51a7c78915a669ec2cf"
   },
   {
     "name": "吉野家",
@@ -65,11 +45,7 @@
     "page": "https://www.yoshinoya.com/",
     "url": "https://www.yoshinoya.com/img/common/apple-touch-icon.png",
     "monogram": "吉",
-    "sha256": "97a9e4c56f6ff61365efc4a802a89c8cc322c9189d6700f8acb549903234fe2f",
-    "size": [
-      180,
-      180
-    ]
+    "assetSHA256": "39a0fb23006c0d6c29591e367c59d0037624bc6723d13733059c9f133a608656"
   },
   {
     "name": "マクドナルド",
@@ -77,11 +53,7 @@
     "page": "https://www.mcdonalds.co.jp/",
     "url": "https://www.mcdonalds.co.jp/assets/images/mcd-logo.svg",
     "monogram": "M",
-    "sha256": "f7e9f9a1fed482b4986b3284eecabce752e7bbd7d6dc51ac13202b3ace3d4490",
-    "size": [
-      384,
-      345
-    ]
+    "assetSHA256": "475a3db10430998e0e42878368672e6f0d7b7e4598abd4b7b7c90e39236574b6"
   },
   {
     "name": "スターバックス",
@@ -89,11 +61,7 @@
     "page": "https://www.starbucks.co.jp/",
     "url": "https://www.starbucks.co.jp/apple-touch-icon.png",
     "monogram": "★",
-    "sha256": "d8fa667049e9ad8ca94f2e0ce2c7477d8379bc25ef8a7f8886aaa2fc4d37a481",
-    "size": [
-      180,
-      180
-    ]
+    "assetSHA256": "efa9fb1a725eebc9484568656c5fb6016d6a50ac42d7f532a1bd14eb87791bc2"
   },
   {
     "name": "イオン",
@@ -101,11 +69,7 @@
     "page": "https://www.aeon.com/",
     "url": "https://www.aeon.com/assets/img/icons/favicon.ico",
     "monogram": "AEON",
-    "sha256": "2a488c7b87a9cf3f64bde996e12eef7842a21fc9a4d2ea4e835681aa63aea319",
-    "size": [
-      64,
-      64
-    ]
+    "assetSHA256": "15fca5bf7d630e15516168e3de84bdb93f896456bd6dc08d398ff66165e9594b"
   },
   {
     "name": "ライフ",
@@ -113,11 +77,7 @@
     "page": "https://www.lifecorp.jp/",
     "url": "https://www.lifecorp.jp/icon/favicon.ico",
     "monogram": "LIFE",
-    "sha256": "e08585df033c76a70762e56ee3cf71ac5463d07d8cdb01eef4166e4a7c60fcbc",
-    "size": [
-      32,
-      32
-    ]
+    "assetSHA256": "c67b547abb1b5bec5614b8b8cc2b942ea6c165c31c5c3564f59dac3b9d02be0e"
   },
   {
     "name": "ウエルシア",
@@ -125,11 +85,7 @@
     "page": "https://www.welcia-yakkyoku.co.jp/assets/front/img/head_logo.png",
     "url": "https://www.welcia-yakkyoku.co.jp/assets/front/img/head_logo.png",
     "monogram": "welcia",
-    "sha256": "a371406794edf9401d68baab66bc4d914e5e4b00f3be847aeb01f1352be47cf1",
-    "size": [
-      180,
-      180
-    ]
+    "assetSHA256": "e76b9272f6c5c4d318de202656085bd6e0ab5ce2d556358b7d47621805d964fd"
   },
   {
     "name": "マツモトキヨシ",
@@ -137,11 +93,7 @@
     "page": "https://www.matsukiyococokara-online.com/",
     "url": "https://www.matsukiyococokara-online.com/store/static/version1022045555/frontend/Mccm/MainTheme/ja_JP/Magento_Theme/apple-touch-icon.png",
     "monogram": "マツキヨ",
-    "sha256": "763c10e2cb8db88461756a625141076df88428e7e18bd34aef36c9cfd32a2503",
-    "size": [
-      180,
-      180
-    ]
+    "assetSHA256": "27864178a5ca489287b930bfaf488689d4932472160e7df8563d6f25bfe9f868"
   },
   {
     "name": "ユニクロ",
@@ -149,11 +101,7 @@
     "page": "https://www.uniqlo.com/jp/ja/",
     "url": "https://asset.uniqlo.com/logotypes/uniqlo_roman_180.png",
     "monogram": "UNIQLO",
-    "sha256": "08c068d858e45c660080dc27015af6e10141137e4ee43007745b1179d2ae7954",
-    "size": [
-      180,
-      180
-    ]
+    "assetSHA256": "e21b5eb64e4836a3d921de643a8dc21d066d6ba77285c656bb84d479b526dc80"
   },
   {
     "name": "無印良品",
@@ -161,11 +109,7 @@
     "page": "https://www.muji.com/jp/ja/",
     "url": "https://www.muji.com/favicon.ico",
     "monogram": "MUJI",
-    "sha256": "fcd4dde6527436d74e270e8fcd33351240689cf2fe4791640c88f602afd43737",
-    "size": [
-      64,
-      64
-    ]
+    "assetSHA256": "1b7565cafbb43630b3f37eb761bc76b003e2ea8ab6625f6fb31532b20604cc31"
   },
   {
     "name": "ヨドバシカメラ",
@@ -173,11 +117,7 @@
     "page": "https://www.yodobashi.com/",
     "url": "https://image.yodobashi.com/catalog/20260707_01/common/img/icons/yfav.ico",
     "monogram": "YODO",
-    "sha256": "b3e086d87e3d0f4a8bd5a64379fa4760278932df0b906b21a6daf70491d1c2c9",
-    "size": [
-      48,
-      48
-    ]
+    "assetSHA256": "db5d30cc58c247b0d79d131ced3a488827b2b47dfec8f8b0c11ea340ea78be10"
   },
   {
     "name": "ビックカメラ",
@@ -185,11 +125,7 @@
     "page": "https://www.biccamera.com/",
     "url": "https://www.biccamera.com/bc/resources4/common/img/favicon.ico",
     "monogram": "BIC",
-    "sha256": "4e6959a806b338fcb0c8c6147418d51377eec11773cbc592d9ce040e4220bd1d",
-    "size": [
-      48,
-      48
-    ]
+    "assetSHA256": "4f6f1ac5a9191b1d667fa72dfda9b0debbdc373e20e3e259e6579403acc5c85e"
   },
   {
     "name": "ミニストップ",
@@ -197,11 +133,7 @@
     "page": "https://www.ministop.co.jp/",
     "url": "https://www.ministop.co.jp/apple-touch-icon.png",
     "monogram": "MINI",
-    "sha256": "15eff422d2cbce494f9b5f761e89cfa0d98921f83a5629e2d4fee0f2c69fb33e",
-    "size": [
-      150,
-      150
-    ]
+    "assetSHA256": "269771ad519d6f6871b075f5074642fee362b108bb9eaaf8ff087a1420dd9033"
   },
   {
     "name": "デイリーヤマザキ",
@@ -209,11 +141,7 @@
     "page": "https://www.daily-yamazaki.jp/",
     "url": "https://www.daily-yamazaki.jp/wp-content/themes/daily_yamazaki/images/apple-touch-icon.png",
     "monogram": "DY",
-    "sha256": "75abdd44a93a9a4bb71e882f2e3eaf25290a4c263c226425a519041705338a34",
-    "size": [
-      180,
-      180
-    ]
+    "assetSHA256": "0ad6b26245cb02a75cfb7357e93cd4d24b6b15add81da32783c1dc3e8c119ec3"
   },
   {
     "name": "セイコーマート",
@@ -221,11 +149,7 @@
     "page": "https://www.seicomart.co.jp/",
     "url": "https://www.seicomart.co.jp/favicon.ico",
     "monogram": "Seico",
-    "sha256": "9cc878f046425953fb8d46937f71a82db1ef0369f90d8657b86a2e8057976d26",
-    "size": [
-      32,
-      32
-    ]
+    "assetSHA256": "6e1680d1a899e23b76d44c8c69a0e01fe672e9d4e8bdb59739ef0224ec6c66a4"
   },
   {
     "name": "ポプラ",
@@ -233,11 +157,7 @@
     "page": "https://www.poplar-cvs.co.jp/",
     "url": "https://www.poplar-cvs.co.jp/images/logo_02.png",
     "monogram": "POP",
-    "sha256": "1f263fc7257280c2cfa828e0da82c702760be28d93a0b6e0627e71500719a9b9",
-    "size": [
-      135,
-      33
-    ]
+    "assetSHA256": "047721c473e6d37a8023eaa0f493245538f6885fba09c5c8b5b80aa03d6fca3f"
   },
   {
     "name": "オーケー",
@@ -245,11 +165,7 @@
     "page": "https://ok-corporation.jp/",
     "url": "https://ok-corporation.jp/apple-touch-icon-180x180.png",
     "monogram": "OK",
-    "sha256": "a1524d917b9aacf4417a29f1f524af0cd92f3b02e8472873f41758e502f67752",
-    "size": [
-      180,
-      180
-    ]
+    "assetSHA256": "a40ad10184d568e39f87d09ece9918f97bcd098d51487bf2613254b646c0fa70"
   },
   {
     "name": "業務スーパー",
@@ -257,11 +173,7 @@
     "page": "https://www.gyomusuper.jp/",
     "url": "https://www.gyomusuper.jp/favicon.ico",
     "monogram": "業務",
-    "sha256": "340fb4d37566eb023869e932570ff22e0ef23eecc16eb20d0fa85594cdc25eb9",
-    "size": [
-      64,
-      64
-    ]
+    "assetSHA256": "365ad5941be1ef3d050e3ccd221cdf726648281123ab7fc768b1069e9149b068"
   },
   {
     "name": "サンディ",
@@ -269,11 +181,7 @@
     "page": "https://www.sundi.co.jp/",
     "url": "https://www.sundi.co.jp/images/apple-touch-icon-precomposed.png",
     "monogram": "Sundi",
-    "sha256": "b29564119c150453fa8cff01cba448ac205f70477fe233f95869d601e90b53d6",
-    "size": [
-      300,
-      300
-    ]
+    "assetSHA256": "b2f63b8dcec04ccc79e3305ee93038279d3156964de397c0769b7e2c13753a88"
   },
   {
     "name": "万代",
@@ -281,11 +189,7 @@
     "page": "https://www.mandai-net.co.jp/",
     "url": "https://www.mandai-net.co.jp/apple-touch-icon.png",
     "monogram": "万代",
-    "sha256": "e022e354879bc79a42bee994c062186a189a664477b498c38649fe01497edd5a",
-    "size": [
-      180,
-      180
-    ]
+    "assetSHA256": "c331cadee4028a328e048480fe2d5b7e29b9c803675fead0bd3f9d40435e986c"
   },
   {
     "name": "イトーヨーカドー",
@@ -293,11 +197,7 @@
     "page": "https://www.itoyokado.co.jp/",
     "url": "https://www.itoyokado.co.jp/common/img/favicon.ico",
     "monogram": "IY",
-    "sha256": "e5d19514b1cfc8a2576292f064430d5b48012924d142875cc32dbd8fa5216feb",
-    "size": [
-      48,
-      48
-    ]
+    "assetSHA256": "1837266f33f5fa20e1def0d305ecd8f850ac66ba41b51d0948527c1b2a3a9847"
   },
   {
     "name": "西友",
@@ -305,11 +205,7 @@
     "page": "https://www.seiyu.co.jp/",
     "url": "https://www.seiyu.co.jp/wp-content/themes/seiyu-corporate/img/share/ico-touch_icon.png",
     "monogram": "SEIYU",
-    "sha256": "27ef77c4c67410adc70ef91924cead5a1d68f9a2e8b3820c3342af9d4cf6548a",
-    "size": [
-      150,
-      150
-    ]
+    "assetSHA256": "b2d4f592eaf5b82b42788283c19db9474386427a42f9c100bf8ef46b1b456f52"
   },
   {
     "name": "マックスバリュ",
@@ -317,11 +213,7 @@
     "page": "https://www.mv-tokai.co.jp/",
     "url": "https://www.mv-tokai.co.jp/wp/wp-content/uploads/fbrfg/apple-touch-icon.png",
     "monogram": "MAX",
-    "sha256": "5b6d48612bdd97a65b585e8bd91512c9df23b5f2dba1fddd6e01470311bb8a6e",
-    "size": [
-      180,
-      180
-    ]
+    "assetSHA256": "e9454d97873b13b99c96a30dd735269fb8bf9312127b5c23d68edc3a1ed2476c"
   },
   {
     "name": "コープ",
@@ -329,11 +221,7 @@
     "page": "https://jccu.coop/",
     "url": "https://jccu.coop/common/img/apple_touch_icon.png",
     "monogram": "COOP",
-    "sha256": "5b16011dbb05bf8749bbfa0430968261003a98e69f207fb4d5101a884c2635ff",
-    "size": [
-      192,
-      192
-    ]
+    "assetSHA256": "254acacd2018d29bb46408a2d94af9be9870878635be87e5f42ae3845569b785"
   },
   {
     "name": "松屋",
@@ -341,7 +229,7 @@
     "monogram": "松屋",
     "asset": "Brand_28",
     "url": "https://www.matsuyafoods.com.hk/zh-hant/img/logo_matsuya.png?1778039531",
-    "sha256": "35212aeda60aa740cf13e1e4b05f193fe7260714f4d0fb353d5667e9ddc80b62"
+    "assetSHA256": "c87708ecd07748574d343614dbf2cb52f6b82038781a9676da6b3cc2f888c169"
   },
   {
     "name": "なか卯",
@@ -349,11 +237,7 @@
     "page": "https://www.nakau.co.jp/",
     "url": "https://www.nakau.co.jp/favicon.ico",
     "monogram": "なか卯",
-    "sha256": "39b40032b6c39e9de0967a23dcfd2132607b7e9421673d85804b6a80cc72ffdd",
-    "size": [
-      32,
-      32
-    ]
+    "assetSHA256": "6f9099bd2c7693d6dff78fbf83aec7aee8eedb21ed2e9fcf8bb79faaf4ed7d14"
   },
   {
     "name": "くら寿司",
@@ -361,11 +245,7 @@
     "page": "https://www.kurasushi.co.jp/",
     "url": "https://www.kurasushi.co.jp/common/images/logo.svg",
     "monogram": "くら",
-    "sha256": "34f8ec20252978b22682d15fbc2a85e0a47966bec23d2ee726e46a3644a3f12e",
-    "size": [
-      384,
-      281
-    ]
+    "assetSHA256": "85dc2f64f83ba253f72296e0240d082655cab369b557fe85397ee935092eafa7"
   },
   {
     "name": "スシロー",
@@ -373,11 +253,7 @@
     "page": "https://www.akindo-sushiro.co.jp/",
     "url": "https://www.akindo-sushiro.co.jp/favicon.ico?260319",
     "monogram": "スシロー",
-    "sha256": "2ea02376fa125da842024a042c50c999a1c08e74d2d2a90812bb2ce010dde2d7",
-    "size": [
-      32,
-      32
-    ]
+    "assetSHA256": "b58cc1600659c0a6453a652a7c2beba5f61ffca9a1365907b8f919c655825617"
   },
   {
     "name": "はま寿司",
@@ -385,11 +261,7 @@
     "page": "https://www.hama-sushi.co.jp/",
     "url": "https://www.hama-sushi.co.jp/assets/common/img/app_icon.png",
     "monogram": "はま",
-    "sha256": "e0843a4bfd4eda608eeaeff024d5a6a8b7e4620e442ad4c02560887ffeb357bd",
-    "size": [
-      180,
-      180
-    ]
+    "assetSHA256": "5de4f7fe0de8f691d20d9d9f4560a9f86d994c47f9db8f3b4a2fe908c31a8132"
   },
   {
     "name": "CoCo壱番屋",
@@ -397,11 +269,7 @@
     "page": "https://www.ichibanya.co.jp/",
     "url": "https://www.ichibanya.co.jp/apple-touch-icon.png",
     "monogram": "CoCo",
-    "sha256": "f05a868c5c9cb6b1b0c27d88bb79fb55fff8925ae01e3db35f249738424c30b3",
-    "size": [
-      152,
-      152
-    ]
+    "assetSHA256": "93c720bc46c9812cf7cd8b56d461e22273ea7926565f80f9b1a5942e165e37cb"
   },
   {
     "name": "やよい軒",
@@ -409,11 +277,7 @@
     "page": "https://www.yayoiken.com/",
     "url": "https://www.yayoiken.com/img/apple-touch-icon.png?20231212",
     "monogram": "やよい",
-    "sha256": "18260893bd8484e81430b911716b33a5ae7641f484e46c74dce8bf0d5ee732fe",
-    "size": [
-      150,
-      150
-    ]
+    "assetSHA256": "6e4f49f724733072ab6f1733f64d9f7e88f06ca9e83d5f63fe4ef6f90d1e879a"
   },
   {
     "name": "サイゼリヤ",
@@ -421,11 +285,7 @@
     "page": "https://www.saizeriya.co.jp/",
     "url": "https://www.saizeriya.co.jp/files/saizeriya_favicon-300x300.png",
     "monogram": "Saize",
-    "sha256": "182421a83f75ee3277bb4f9aa8a93db4437c3f88f01b3b89576605c9e321d8dc",
-    "size": [
-      300,
-      300
-    ]
+    "assetSHA256": "cb975d1beb56e1970f5a141dcd70cdf4862bf162e032da982e2ab0cd9cfea466"
   },
   {
     "name": "ガスト",
@@ -433,11 +293,7 @@
     "page": "https://www.skylark.co.jp/gusto/",
     "url": "https://www.skylark.co.jp/site_resource/gusto/images/fav.ico",
     "monogram": "ガスト",
-    "sha256": "ac7d3751694485da04c1ce3dc051bfe2639e323d4a4b442d6599a96c7caa1bf3",
-    "size": [
-      16,
-      16
-    ]
+    "assetSHA256": "ee50c4d9da6f395c4bf8dabd3ffdd31bc0d4ba2314050a005561b3bcb2f706b1"
   },
   {
     "name": "ケンタッキー",
@@ -445,11 +301,7 @@
     "page": "https://www.kfc.co.jp/",
     "url": "https://www.kfc.co.jp/logo192.png",
     "monogram": "KFC",
-    "sha256": "bc31f332d9f5c8364c164774af78def41cdeee7d4ad7daa6ab9f8aa5f7a4741a",
-    "size": [
-      192,
-      192
-    ]
+    "assetSHA256": "a515125dd6d4ed8621e72596667c2d3527a16d2aaf3c6a2dcbc501becbaa7857"
   },
   {
     "name": "モスバーガー",
@@ -457,11 +309,7 @@
     "page": "https://www.mos.jp/",
     "url": "https://www.mos.jp/apple-touch-icon-precomposed.png",
     "monogram": "MOS",
-    "sha256": "5158cc5739b403936f48d8477700592755dccb646b862d2e939381e1a34acd3a",
-    "size": [
-      315,
-      315
-    ]
+    "assetSHA256": "44cc25a5ce297e967ea87121912680a6dc6234e1b990958c2f51bfe31cee7666"
   },
   {
     "name": "餃子の王将",
@@ -469,11 +317,7 @@
     "page": "https://www.ohsho.co.jp/",
     "url": "https://www.ohsho.co.jp/apple-touch-icon.png",
     "monogram": "王将",
-    "sha256": "a5b19d3868e33e29cbf8106c15fcb589d5eee6971b17b8a832c887f689ff423a",
-    "size": [
-      144,
-      144
-    ]
+    "assetSHA256": "16c8e50d8e1d7dc802d84c92183a3e69763ef5d4655231fe614062d1c72d77a9"
   },
   {
     "name": "丸亀製麺",
@@ -481,11 +325,7 @@
     "page": "https://jp.marugame.com/",
     "url": "https://jp.marugame.com/apple-touch-icon.png",
     "monogram": "丸亀",
-    "sha256": "927533a0c3586d6326c3ca423d8ac63ba67b3d46cb7b4c493bd5e28120c4decd",
-    "size": [
-      180,
-      180
-    ]
+    "assetSHA256": "92d6d0a8dbb707dd23b0c293c38f76fefade8649c8f32ff6c161dbd43b2197f7"
   },
   {
     "name": "ドトール",
@@ -493,11 +333,7 @@
     "page": "https://www.doutor.co.jp/",
     "url": "https://www.doutor.co.jp/common/images/dtr_bicon.png",
     "monogram": "DOUTOR",
-    "sha256": "1cc16e6e12b6471fd59caa93abac3525ba0a5b7a0ee642e77baeac022a97d585",
-    "size": [
-      400,
-      400
-    ]
+    "assetSHA256": "8f8362d9f5fca1dd8162a41d451ce12f699fd89fea4ad852d21f775556e7acb6"
   },
   {
     "name": "タリーズ",
@@ -505,11 +341,7 @@
     "page": "https://www.tullys.co.jp/",
     "url": "https://www.tullys.co.jp/apple-touch-icon.png?20250121",
     "monogram": "TULLY",
-    "sha256": "276b46b281203f942c67d6ae321aacee39e01302f0993e0acce56c909bde4a1c",
-    "size": [
-      152,
-      152
-    ]
+    "assetSHA256": "87848e54ea75a8ea184dae48c14f7ed89e472ccf5d16527a6e516b9f7c4410a1"
   },
   {
     "name": "コメダ珈琲店",
@@ -517,11 +349,7 @@
     "page": "https://www.komeda.co.jp/",
     "url": "https://www.komeda.co.jp/img/apple-touch-icon.png",
     "monogram": "KOMEDA",
-    "sha256": "cd64ea213ac8c9116962d5baa6dc639bbebf83bb0211c56ee9f36d548519097f",
-    "size": [
-      180,
-      180
-    ]
+    "assetSHA256": "59924714fc4a85eb1e05a7ec40a1eaa1923febba0ee99ea8f493d218fc20e0eb"
   },
   {
     "name": "サンマルクカフェ",
@@ -529,11 +357,7 @@
     "page": "https://www.saint-marc-hd.com/saintmarccafe/",
     "url": "https://www.saint-marc-hd.com/assets/images/saintmarccafe/favicon.ico",
     "monogram": "ST.MARC",
-    "sha256": "6a342eebff45a3998066bc1ed81a2f159bd8f87e8239c080c645cc9eb7cfa74a",
-    "size": [
-      30,
-      30
-    ]
+    "assetSHA256": "84af490fbfa6c2b54ecf4e5b09dde4824b5407f4fb98d26747a3540910ce1ed9"
   },
   {
     "name": "スギ薬局",
@@ -541,11 +365,7 @@
     "page": "https://www.sugi-net.jp/",
     "url": "https://www.sugi-net.jp/favicons/apple-touch-icon.png",
     "monogram": "SUGI",
-    "sha256": "69728e0d7bb845a4a84b767fa0c3350ae09edf8ffd35978be3cc350125326adb",
-    "size": [
-      180,
-      180
-    ]
+    "assetSHA256": "4a04ac55e69b95bbadb3cfdd7444d04a2caef277e66aa4f668a089678daec79c"
   },
   {
     "name": "サンドラッグ",
@@ -553,11 +373,7 @@
     "page": "https://www.sundrug.co.jp/",
     "url": "https://www.sundrug.co.jp/wp-content/themes/template-original/bin/image/design/parts/logo_site.png",
     "monogram": "SUN",
-    "sha256": "c622c2b2671f651245a2f3232d74655ec88ba0c5e12416c9b21972e8232d5f8e",
-    "size": [
-      400,
-      64
-    ]
+    "assetSHA256": "4112f4e72e82238f393cb75c503e11327b38b8b004e1d7005005660834ae6360"
   },
   {
     "name": "ココカラファイン",
@@ -565,11 +381,7 @@
     "page": "https://tsuminami.aeonmall.jp/shop/38e0e462-b90b-4bef-9677-6378087fdc7f",
     "url": "https://image-cdn.aeonmall.jp/uploads/09eb76da-1634-4b29-862e-ee23f8bc299c.png",
     "monogram": "coco",
-    "sha256": "3af319d307ebd3da340140662e66536ec5f3a816d3b7f452ddbd7c191b65823c",
-    "size": [
-      96,
-      96
-    ]
+    "assetSHA256": "da3fbb29a7bcd8e7b883132882b9468610638cdd6867dab39b9307cea88cb8fc"
   },
   {
     "name": "ツルハドラッグ",
@@ -577,11 +389,7 @@
     "page": "https://www.tsuruha.co.jp/",
     "url": "https://www.tsuruha.co.jp/icon.svg?icon.34xh52sggdjyt.svg",
     "monogram": "鶴",
-    "sha256": "3a27cc6b999497df4c46f8e5d9c79c2f4487aaa155d00b2fdac4e7e173463bbc",
-    "size": [
-      384,
-      384
-    ]
+    "assetSHA256": "2cd469a69f6658ac2ba650c03bc36ead0b65f9fa3fbb9496c0a77736e15e5b8d"
   },
   {
     "name": "ドン・キホーテ",
@@ -589,11 +397,7 @@
     "page": "https://www.donki.com/",
     "url": "https://www.donki.com/favicon.ico",
     "monogram": "DONKI",
-    "sha256": "5ea0522f93144d8d03d4dbf894598728de6d26e1c5a015fa232b48126323ecbc",
-    "size": [
-      32,
-      32
-    ]
+    "assetSHA256": "eb7386eb9ae42c54598224bbf85c6b8332c0163d2da339ed0b7b8af0286ad72a"
   },
   {
     "name": "ダイソー",
@@ -601,18 +405,15 @@
     "page": "https://www.daiso-sangyo.co.jp/en/",
     "url": "https://www.daiso-sangyo.co.jp/wp-content/themes/daiso-co-html/images/config/corporate/favicon.ico",
     "monogram": "DAISO",
-    "sha256": "64140141bbfa29df13306f5d1ca52c2031f19d54049c7c588441e6f76cbb499e",
-    "size": [
-      18,
-      18
-    ]
+    "assetSHA256": "d13878b56f85baebeb2865110c0586f807ee2023df0871d74de2bce043cbe97a"
   },
   {
     "name": "セリア",
     "page": "https://zama.aeonmall.jp/shop/9d826543-d9d1-4e9e-8f66-64369b659eec",
     "monogram": "Seria",
     "asset": "Brand_51",
-    "url": "https://image-cdn.aeonmall.jp/uploads/313a88e5-4614-4a5e-891f-1307f86794bc.png"
+    "url": "https://image-cdn.aeonmall.jp/uploads/313a88e5-4614-4a5e-891f-1307f86794bc.png",
+    "assetSHA256": "8c6db58327a9eb8f84fe5bc542dcc4417dc0f468ed975e7572699d46f9fb881f"
   },
   {
     "name": "GU",
@@ -620,11 +421,7 @@
     "page": "https://www.gu-global.com/jp/ja/",
     "url": "https://www.gu-global.com/favicon.ico",
     "monogram": "GU",
-    "sha256": "24472fe24ff4fb1d9abb80cd2fda30af2ccf12f47636192ad396ee6eb745bafc",
-    "size": [
-      48,
-      48
-    ]
+    "assetSHA256": "17036025a2f088bb6985bb7862de1720a72d15aa3dfe14aac2226464fd03d66c"
   },
   {
     "name": "しまむら",
@@ -632,11 +429,7 @@
     "page": "https://www.shimamura.gr.jp/",
     "url": "https://www.shimamura.gr.jp/assets-c/common/img/favicon.ico",
     "monogram": "しまむら",
-    "sha256": "4f64f695885ed08d821c44adcf71ee719f881f43f1891dae825640f607593bef",
-    "size": [
-      256,
-      256
-    ]
+    "assetSHA256": "e2f6cfe6e698b2c7cb8ed55235d12e744218a844511ddc0329a76e772a97da9e"
   },
   {
     "name": "ロフト",
@@ -644,11 +437,7 @@
     "page": "https://www.loft.co.jp/",
     "url": "https://www.loft.co.jp/lib/img/header/img-logo02.png",
     "monogram": "LOFT",
-    "sha256": "a14d4013e5c18d519a0d3d1e8a7f87ef741e5a18ea84aaa7974999cb71031780",
-    "size": [
-      93,
-      59
-    ]
+    "assetSHA256": "9cb955bbee025c08b63a5181da26bb547dbe2fdadc7d086a9a312cc2cbe70576"
   },
   {
     "name": "ニトリ",
@@ -656,11 +445,7 @@
     "page": "https://www.nitori-net.jp/",
     "url": "https://www.nitori-net.jp/ec/assets/icons/NITORI_LOGO.svg",
     "monogram": "NITORI",
-    "sha256": "092efac177bcf7887bf0b33bdf41b656157a2592d5c0b085edbb79c86f00a517",
-    "size": [
-      384,
-      384
-    ]
+    "assetSHA256": "2999fc75b609d0da8e4feb6743294845aae6cf4c23df35e604c058cde617fa46"
   },
   {
     "name": "東急ハンズ",
@@ -668,11 +453,7 @@
     "page": "https://info.hands.net/",
     "url": "https://info.hands.net/favicon.ico",
     "monogram": "HANDS",
-    "sha256": "ea40dfda2a003befe7d3952fbb5c32be8e99e3f456ff1be8be96409ed4c151bb",
-    "size": [
-      32,
-      32
-    ]
+    "assetSHA256": "23e0710791fa6a3c49fd6fe00a23cdfde22934d31c61fef79097d65c6aeba044"
   },
   {
     "name": "エディオン",
@@ -680,11 +461,7 @@
     "page": "https://www.edion.com/",
     "url": "https://www.edion.com/favicon.ico",
     "monogram": "EDION",
-    "sha256": "cabbdaa75766a292775dcd85cff99f0f7c983a4eda2ea0f187b4c67f6c07d574",
-    "size": [
-      64,
-      64
-    ]
+    "assetSHA256": "8f11fb57619684fec2d21e9f53b522ec246cbbfddfe2c56b9f48bdd689d7401a"
   },
   {
     "name": "ヤマダデンキ",
@@ -692,11 +469,7 @@
     "page": "https://www.yamada-denkiweb.com/",
     "url": "https://www.yamada-denkiweb.com/favicon.ico",
     "monogram": "YAMADA",
-    "sha256": "1d6d994fa366058ef95203900f68000bddd11e80ff336da884db7fe7e7ccec21",
-    "size": [
-      16,
-      16
-    ]
+    "assetSHA256": "450760fc6a2a7041e1450a329caa2c9cd66a0da161e24e82a6d183becdb0c6a8"
   },
   {
     "name": "ジョーシン",
@@ -704,11 +477,7 @@
     "page": "https://joshinweb.jp/",
     "url": "https://joshinweb.jp/favicon.ico",
     "monogram": "Joshin",
-    "sha256": "a49ad6233da5b809aac44b7f868cf7f9bd64e1f933326d2060692ca1287b0303",
-    "size": [
-      32,
-      32
-    ]
+    "assetSHA256": "3d0944fb85c298f487a2dc5ca26872976645fc45547d603f58a3edce4df48975"
   },
   {
     "name": "高島屋",
@@ -716,11 +485,7 @@
     "page": "https://www.takashimaya.co.jp/",
     "url": "https://www.takashimaya.co.jp/favicon.ico",
     "monogram": "高",
-    "sha256": "133caae9920dbb75e7f89afc890a9db53f317b36533794fc5c7bb028413c7b9f",
-    "size": [
-      32,
-      32
-    ]
+    "assetSHA256": "9313e20012ae368abbe13f3ce2afb036a2b8c28c777f8b26fad2bf7a63f86845"
   },
   {
     "name": "阪神百貨店",
@@ -728,7 +493,7 @@
     "monogram": "阪神",
     "asset": "Brand_61",
     "url": "https://www.hanshin-dept.jp/hshonten/assets/img/common/favicon.ico",
-    "sha256": "c7c0d250deb19678a38eb5cd7b4f72932bd4ae02728983efa4d1d20cb4d226f9"
+    "assetSHA256": "9566bac5c6fa0a2a219860c7bfdd6fdf4262b14833727c4a8541b590c40b47dd"
   },
   {
     "name": "阪急百貨店",
@@ -736,11 +501,7 @@
     "page": "https://www.hankyu-dept.co.jp/",
     "url": "https://www.hankyu-dept.co.jp/honten/modules/icon.ico",
     "monogram": "阪急",
-    "sha256": "0de75f5ad8ad722175592310b7ed13e0e0a54de52e2f28d0720dba427218382f",
-    "size": [
-      32,
-      32
-    ]
+    "assetSHA256": "d8ad6f4158bbc0df24686cba856733e55dccbe01200480d4792f633a01897c2a"
   },
   {
     "name": "大丸",
@@ -748,10 +509,6 @@
     "page": "https://www.daimaru.co.jp/",
     "url": "https://www.daimaru.co.jp/img/apple-touch-icon.png",
     "monogram": "大丸",
-    "sha256": "ce177b06744a6f54ea2b83a75390fde3df66878cab75b173a9b068ea98af2906",
-    "size": [
-      192,
-      192
-    ]
+    "assetSHA256": "3eb0538b4304aa71268c3465287589c4dc3bcc6aef28eb4e43f4947f65b6b3ac"
   }
 ]
