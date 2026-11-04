@@ -1,0 +1,51 @@
+name: Tieba custom IPA
+on:
+  push:
+    branches: [tieba-custom-ipa]
+    paths: ['tieba-custom/**', '.github/workflows/tieba-custom-ipa.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: custom
+      - uses: actions/checkout@v4
+        with:
+          repository: infinityf4p/TiebaPure-iOS
+          ref: 5a87225190d6a79b1e3ad3b7d846edd407d416c7
+          path: app
+      - name: Apply custom source
+        run: cp -R custom/tieba-custom/TiebaPure/. app/TiebaPure/
+      - name: Select Xcode
+        run: |
+          XCODE_PATH=$(find /Applications -maxdepth 1 -name 'Xcode*.app' | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+          xcodebuild -version
+      - name: Build device app
+        working-directory: app
+        run: |
+          set -o pipefail
+          xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build.log
+      - name: Package unsigned IPA
+        working-directory: app
+        run: |
+          mkdir -p build/package/Payload
+          ditto build/DerivedData/Build/Products/Release-iphoneos/TiebaPure.app build/package/Payload/TiebaPure.app
+          test -f build/package/Payload/TiebaPure.app/TiebaPure
+          cd build/package
+          zip -qry ../TiebaPure-custom-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TiebaPure-custom-unsigned
+          path: app/build/TiebaPure-custom-unsigned.ipa
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: TiebaPure-build-log
+          path: app/build.log
