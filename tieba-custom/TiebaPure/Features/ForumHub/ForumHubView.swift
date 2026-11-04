@@ -69,6 +69,26 @@ struct ForumHubView: View {
                 }
             }
 
+            if account != nil {
+                Section {
+                    Button {
+                        startSignAllFollowedForums()
+                    } label: {
+                        HStack {
+                            Label("一键签到", systemImage: "checkmark.circle")
+                            Spacer()
+                            if signCoordinator.isRunning {
+                                ProgressView()
+                                    .accessibilityLabel("正在签到")
+                            }
+                        }
+                    }
+                    .disabled(signCoordinator.isRunning)
+                    .accessibilityLabel("为关注的贴吧签到")
+                    .accessibilityIdentifier("forum-hub-sign-all")
+                }
+            }
+
             if visibleRecentForums.isEmpty == false {
                 Section {
                     ForumTileGrid(
@@ -167,21 +187,7 @@ struct ForumHubView: View {
                 HStack {
                     Text("关注贴吧")
                     Spacer(minLength: TiebaPureTheme.Spacing.sm)
-                    if account != nil, visibleFollowedForums.isEmpty == false {
-                        if signCoordinator.isRunning {
-                            ProgressView()
-                                .controlSize(.small)
-                                .accessibilityLabel("正在签到")
-                        } else {
-                            Button("一键签到") {
-                                startSignAllFollowedForums()
-                            }
-                            .font(.footnote)
-                            .textCase(nil)
-                            .accessibilityLabel("为关注的贴吧签到")
-                            .accessibilityIdentifier("forum-hub-sign-all")
-                        }
-                    }
+
                 }
             }
         }
