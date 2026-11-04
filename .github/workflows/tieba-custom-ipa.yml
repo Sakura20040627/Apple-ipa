@@ -20,7 +20,9 @@ jobs:
           ref: 5a87225190d6a79b1e3ad3b7d846edd407d416c7
           path: app
       - name: Apply custom source
-        run: cp -R custom/tieba-custom/TiebaPure/. app/TiebaPure/
+        run: |
+          cp -R custom/tieba-custom/TiebaPure/. app/TiebaPure/
+          cp custom/tieba-custom/TiebaPureTests/HomeNavigationTests.swift app/TiebaPureTests/HomeNavigationTests.swift
       - name: Select Xcode
         run: |
           XCODE_PATH=$(find /Applications -maxdepth 1 -name 'Xcode*.app' | sort -V | tail -1)
@@ -31,6 +33,12 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build.log
+      - name: Following feed regression tests
+        working-directory: app
+        run: |
+          set -o pipefail
+          SIM_ID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(v["udid"] for k,vs in d["devices"].items() if "iOS" in k for v in vs if "iPhone" in v["name"]))')
+          xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure -configuration Debug -destination "platform=iOS Simulator,id=$SIM_ID" -derivedDataPath build/TestData -parallel-testing-enabled NO test -only-testing:TiebaPureTests/FollowingFeedRegressionTests 2>&1 | tee -a build.log
       - name: Package unsigned IPA
         working-directory: app
         run: |

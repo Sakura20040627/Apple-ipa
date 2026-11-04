@@ -69,26 +69,6 @@ struct ForumHubView: View {
                 }
             }
 
-            if account != nil {
-                Section {
-                    Button {
-                        startSignAllFollowedForums()
-                    } label: {
-                        HStack {
-                            Label("一键签到", systemImage: "checkmark.circle")
-                            Spacer()
-                            if signCoordinator.isRunning {
-                                ProgressView()
-                                    .accessibilityLabel("正在签到")
-                            }
-                        }
-                    }
-                    .disabled(signCoordinator.isRunning)
-                    .accessibilityLabel("为关注的贴吧签到")
-                    .accessibilityIdentifier("forum-hub-sign-all")
-                }
-            }
-
             if visibleRecentForums.isEmpty == false {
                 Section {
                     ForumTileGrid(

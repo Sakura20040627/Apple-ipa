@@ -15,6 +15,7 @@ struct HomeView: View {
     @State private var threads: [ThreadSummary] = []
     @State private var followingUsers: [UserSummary] = []
     @State private var remainingUserIDs: Set<Int64> = []
+    @State private var userNextPages: [Int64: Int] = [:]
     @State private var page = 1
     @State private var hasMore = true
     @State private var isLoading = false
@@ -331,7 +332,7 @@ struct HomeView: View {
             .frame(height: 0)
             .id(HomeScrollTarget.top)
 
-        if isLoading && didLoad == false {
+        if isLoading && didLoad == false && threads.isEmpty {
             ReaderStateView.loading("正在加载帖子")
         } else if let errorMessage, threads.isEmpty {
             ReaderStateView.error(message: errorMessage) {
@@ -601,9 +602,10 @@ struct HomeView: View {
             let requestedPage = page
             let cachedUsers = followingUsers
             let remainingIDs = remainingUserIDs
+            let cachedPages = userNextPages
             let task = Task {
                 guard let account else {
-                    return FollowingFeedBatch(users: [], threads: [], remainingUserIDs: [])
+                    return FollowingFeedBatch(users: [], threads: [], remainingUserIDs: [], nextPages: [:], failureCount: 0)
                 }
                 var users = cachedUsers
                 if requestedPage == 1 {
@@ -612,7 +614,10 @@ struct HomeView: View {
                     var seen = Set<Int64>()
                     while true {
                         try Task.checkCancellation()
-                        let result = try await environment.api.followedUsers(account: account, page: relationshipPage)
+                        let currentPage = relationshipPage
+                        let result = try await FollowingFeedTimeout.run {
+                            try await environment.api.followedUsers(account: account, page: currentPage)
+                        }
                         let fresh = result.users.filter { $0.id > 0 && seen.insert($0.id).inserted }
                         users.append(contentsOf: fresh)
                         if result.hasMore == false { break }
@@ -624,17 +629,53 @@ struct HomeView: View {
                 }
                 var posts: [ThreadSummary] = []
                 var nextIDs = Set<Int64>()
-                // Keep requests sequential to avoid flooding the service for large follow lists.
-                // Commit a whole batch only after success so retries never skip a user's page.
-                for user in users where requestedPage == 1 || remainingIDs.contains(user.id) {
+                var nextPages: [Int64: Int] = [:]
+                var failures = 0
+                var replacedRefresh = false
+                let candidates = users.filter { requestedPage == 1 || remainingIDs.contains($0.id) }
+                // Four concurrent readers; each completion immediately becomes visible.
+                for offset in stride(from: 0, to: candidates.count, by: 4) {
                     try Task.checkCancellation()
-                    let result = try await environment.api.userThreads(account: account, userID: user.id, page: requestedPage)
-                    if result.visibility == .visible {
-                        posts.append(contentsOf: result.threads.filter { $0.author.id == user.id })
-                        if result.hasMore { nextIDs.insert(user.id) }
+                    let chunk = Array(candidates[offset..<min(offset + 4, candidates.count)])
+                    let results = try await FollowingFeedLoader.load(
+                        users: chunk,
+                        nextPages: requestedPage == 1 ? [:] : cachedPages,
+                        fetch: { userID, userPage in
+                            try await FollowingFeedTimeout.run {
+                                try await environment.api.userThreads(account: account, userID: userID, page: userPage)
+                            }
+                        },
+                        onPage: { incoming in
+                            guard generation == requestGeneration,
+                                  requestedSession == self.account?.sessionIdentity else { return }
+                            guard incoming.isEmpty == false else { return }
+                            if requestedPage == 1 && replacedRefresh == false {
+                                threads = []
+                                replacedRefresh = true
+                            }
+                            let visible = incoming.filter(TiebaContentFilter.shouldKeep(thread:))
+                            threads = HomeFeedMerge.append(existing: threads, incoming: visible, maximumItemCount: Int.max)
+                            threads = FollowingFeedLoader.sorted(threads)
+                            if threads.isEmpty == false { didLoad = true }
+                        }
+                    )
+                    for result in results {
+                        if result.error != nil {
+                            failures += 1
+                            nextIDs.insert(result.user.id)
+                            nextPages[result.user.id] = result.requestedPage
+                            continue
+                        }
+                        guard let userPage = result.page else { continue }
+                        posts.append(contentsOf: result.threads)
+                        if userPage.visibility == .visible && userPage.hasMore {
+                            nextIDs.insert(result.user.id)
+                            nextPages[result.user.id] = result.requestedPage + 1
+                        }
                     }
                 }
-                return FollowingFeedBatch(users: users, threads: posts, remainingUserIDs: nextIDs)
+                return FollowingFeedBatch(users: users, threads: posts, remainingUserIDs: nextIDs,
+                                          nextPages: nextPages, failureCount: failures)
             }
             loadTask = task
             let batch = try await task.value
@@ -643,6 +684,7 @@ struct HomeView: View {
                   requestedSession == account?.sessionIdentity else { return }
             followingUsers = batch.users
             remainingUserIDs = batch.remainingUserIDs
+            userNextPages = batch.nextPages
             let visibleNext = next.filter(TiebaContentFilter.shouldKeep(thread:))
             if requestedPage == 1 {
                 threads = HomeFeedMerge.append(existing: [], incoming: visibleNext, maximumItemCount: Int.max)
@@ -651,10 +693,9 @@ struct HomeView: View {
             }
             // Pagination follows the service page, not the number left after
             // applying local block rules.
-            threads.sort {
-                let lhs = $0.createdAt ?? .distantPast
-                let rhs = $1.createdAt ?? .distantPast
-                return lhs == rhs ? $0.id > $1.id : lhs > rhs
+            threads = FollowingFeedLoader.sorted(threads)
+            if batch.failureCount > 0 {
+                errorMessage = "有 \(batch.failureCount) 位关注用户的帖子暂时未能加载，已显示其他内容，请重试。"
             }
             hasMore = batch.remainingUserIDs.isEmpty == false
             page = requestedPage + 1
@@ -914,6 +955,8 @@ private struct FollowingFeedBatch {
     var users: [UserSummary]
     var threads: [ThreadSummary]
     var remainingUserIDs: Set<Int64>
+    var nextPages: [Int64: Int]
+    var failureCount: Int
 }
 
 private enum FollowingFeedError: LocalizedError {
@@ -921,5 +964,85 @@ private enum FollowingFeedError: LocalizedError {
 
     var errorDescription: String? {
         "关注名单未能完整加载，请下拉重试。"
+    }
+}
+
+struct FollowingFeedUserResult {
+    let user: UserSummary
+    let requestedPage: Int
+    let page: UserThreadsPage?
+    let error: String?
+
+    var threads: [ThreadSummary] {
+        guard let page, page.visibility == .visible else { return [] }
+        return page.threads.compactMap { thread in
+            // Some profile responses omit the author ID. The requested profile
+            // supplies that identity; never discard all of those valid posts.
+            guard thread.author.id == 0 || thread.author.id == user.id else { return nil }
+            var result = thread
+            if result.author.id == 0 { result.author = user }
+            return result
+        }
+    }
+}
+
+enum FollowingFeedLoader {
+    @MainActor
+    static func load(
+        users: [UserSummary],
+        nextPages: [Int64: Int],
+        fetch: @escaping (Int64, Int) async throws -> UserThreadsPage,
+        onPage: ([ThreadSummary]) -> Void
+    ) async throws -> [FollowingFeedUserResult] {
+        try await withThrowingTaskGroup(of: FollowingFeedUserResult.self) { group in
+            for user in users {
+                let page = nextPages[user.id] ?? 1
+                group.addTask {
+                    do {
+                        let response = try await fetch(user.id, page)
+                        try Task.checkCancellation()
+                        return FollowingFeedUserResult(user: user, requestedPage: page, page: response, error: nil)
+                    } catch is CancellationError {
+                        throw CancellationError()
+                    } catch {
+                        try Task.checkCancellation()
+                        return FollowingFeedUserResult(user: user, requestedPage: page, page: nil, error: error.localizedDescription)
+                    }
+                }
+            }
+            var results: [FollowingFeedUserResult] = []
+            for try await result in group {
+                try Task.checkCancellation()
+                onPage(result.threads)
+                results.append(result)
+            }
+            return results
+        }
+    }
+
+    static func sorted(_ threads: [ThreadSummary]) -> [ThreadSummary] {
+        threads.sorted {
+            let lhs = $0.createdAt ?? .distantPast
+            let rhs = $1.createdAt ?? .distantPast
+            return lhs == rhs ? $0.id > $1.id : lhs > rhs
+        }
+    }
+}
+
+enum FollowingFeedTimeout {
+    static func run<T: Sendable>(
+        seconds: Double = 12,
+        operation: @escaping () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask { try await operation() }
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw URLError(.timedOut)
+            }
+            defer { group.cancelAll() }
+            guard let result = try await group.next() else { throw CancellationError() }
+            return result
+        }
     }
 }
