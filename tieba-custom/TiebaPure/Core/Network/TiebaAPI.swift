@@ -1,0 +1,1142 @@
+import Foundation
+
+struct TiebaAPI {
+    var client: TiebaHTTPClient
+    var requestBuilder = TiebaRequestBuilder.live()
+    var postingBootstrap: any TiebaPostingBootstrapping = TiebaPostingBootstrap.live()
+
+    func validateLogin(cookies: BaiduCookies) async throws -> Account {
+        guard BaiduCredentialPolicy.isValid(cookies) else {
+            throw AuthSessionError.untrustedCookie
+        }
+        let loginResponse: LoginResponseDTO?
+        do {
+            loginResponse = try await login(
+                bduss: cookies.bduss,
+                stoken: cookies.stoken,
+                baiduID: cookies.baiduID ?? ""
+            )
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            loginResponse = nil
+        }
+        try Task.checkCancellation()
+
+        let nickname: InitNicknameResponseDTO?
+        do {
+            nickname = try await initNickname(
+                bduss: cookies.bduss,
+                stoken: cookies.stoken,
+                baiduID: cookies.baiduID ?? ""
+            )
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            nickname = nil
+        }
+        try Task.checkCancellation()
+
+        if let account = account(from: loginResponse, nickname: nickname, cookies: cookies) {
+            return account
+        }
+
+        let webInfo = try await webMyInfo(cookies: cookies)
+        guard let account = account(from: webInfo, fallbackTBS: loginResponse?.anti?.tbs, cookies: cookies) else {
+            throw LoginValidationError.missingAccountInfo
+        }
+        return account
+    }
+
+    func login(bduss: String, stoken: String, baiduID: String = "") async throws -> LoginResponseDTO {
+        let timestamp = Int64(Date().timeIntervalSince1970 * 1_000)
+        var fields = requestBuilder.officialCommonFields(
+            baiduID: baiduID,
+            clientVersion: "11.10.8.6",
+            timestamp: timestamp
+        )
+        fields["bdusstoken"] = "\(bduss)|"
+        fields["stoken"] = stoken
+        fields["channel_id"] = ""
+        fields["channel_uid"] = ""
+        fields["authsid"] = "null"
+
+        var headers = requestBuilder.officialHeaders(
+            baiduID: baiduID,
+            clientVersion: "11.10.8.6",
+            timestamp: timestamp
+        )
+        // The login route rejects these headers from the standard client set.
+        headers.removeValue(forKey: "Charset")
+        headers.removeValue(forKey: "client_type")
+
+        return try await client.postForm(
+            .login,
+            fields: fields,
+            headers: headers,
+            signingSecret: "tiebaclient!!!",
+            as: LoginResponseDTO.self
+        )
+    }
+
+    func initNickname(bduss: String, stoken: String, baiduID: String = "") async throws -> InitNicknameResponseDTO {
+        let timestamp = Int64(Date().timeIntervalSince1970 * 1_000)
+        var fields = requestBuilder.officialCommonFields(
+            baiduID: baiduID,
+            clientVersion: "11.10.8.6",
+            timestamp: timestamp
+        )
+        fields["BDUSS"] = bduss
+        fields["stoken"] = stoken
+
+        var headers = requestBuilder.officialHeaders(
+            baiduID: baiduID,
+            clientVersion: "11.10.8.6",
+            timestamp: timestamp
+        )
+        headers.removeValue(forKey: "Charset")
+        headers.removeValue(forKey: "client_type")
+
+        return try await client.postForm(
+            .initNickname,
+            fields: fields,
+            headers: headers,
+            signingSecret: "tiebaclient!!!",
+            as: InitNicknameResponseDTO.self
+        )
+    }
+
+    func webMyInfo(cookies: BaiduCookies) async throws -> WebMyInfoResponseDTO {
+        try await client.getJSON(
+            .webMyInfo,
+            queryItems: [.init(name: "need_user", value: "1")],
+            headers: [
+                "Cookie": cookies.minimalCookieHeader,
+                "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"
+            ],
+            as: WebMyInfoResponseDTO.self
+        )
+    }
+
+    private func account(
+        from login: LoginResponseDTO?,
+        nickname: InitNicknameResponseDTO?,
+        cookies: BaiduCookies
+    ) -> Account? {
+        guard let user = login?.user,
+              let tbs = login?.anti?.tbs,
+              user.id.isEmpty == false,
+              tbs.isEmpty == false else {
+            return nil
+        }
+
+        let displayName = firstNonEmpty(nickname?.userInfo?.nameShow, user.name)
+        return Account(
+            uid: user.id,
+            name: firstNonEmpty(user.name, displayName, user.id),
+            displayName: firstNonEmpty(displayName, user.name, user.id),
+            portrait: user.portrait,
+            bduss: cookies.bduss,
+            stoken: cookies.stoken,
+            baiduID: cookies.baiduID,
+            tbs: tbs
+        )
+    }
+
+    private func account(
+        from webInfo: WebMyInfoResponseDTO,
+        fallbackTBS: String?,
+        cookies: BaiduCookies
+    ) -> Account? {
+        guard let data = webInfo.data,
+              data.isLogin != false,
+              let uid = firstNonEmpty(data.uid, data.id).nonEmpty,
+              let tbs = firstNonEmpty(fallbackTBS, data.tbs, data.itbTbs).nonEmpty else {
+            return nil
+        }
+
+        let name = firstNonEmpty(data.name, data.nameShow, uid)
+        let displayName = firstNonEmpty(data.nameShow, data.name, uid)
+        return Account(
+            uid: uid,
+            name: name,
+            displayName: displayName,
+            portrait: firstNonEmpty(data.portrait, data.portraitURL),
+            bduss: cookies.bduss,
+            stoken: cookies.stoken,
+            baiduID: cookies.baiduID,
+            tbs: tbs
+        )
+    }
+
+    private func firstNonEmpty(_ values: String?...) -> String {
+        values.compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { $0.isEmpty == false } ?? ""
+    }
+}
+
+struct LoginResponseDTO: Decodable {
+    struct User: Decodable {
+        var id: String
+        var name: String
+        var portrait: String
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case portrait
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = container.decodeStringIfPresent(forKey: .id) ?? ""
+            name = container.decodeStringIfPresent(forKey: .name) ?? ""
+            portrait = container.decodeStringIfPresent(forKey: .portrait) ?? ""
+        }
+    }
+
+    struct Anti: Decodable {
+        var tbs: String
+
+        enum CodingKeys: String, CodingKey {
+            case tbs
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            tbs = container.decodeStringIfPresent(forKey: .tbs) ?? ""
+        }
+    }
+
+    var user: User?
+    var anti: Anti?
+    var errorCode: String?
+    var errorMessage: String?
+
+    enum CodingKeys: String, CodingKey {
+        case user
+        case anti
+        case errorCode = "error_code"
+        case errorMessage = "error_msg"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        user = try? container.decodeIfPresent(User.self, forKey: .user)
+        anti = try? container.decodeIfPresent(Anti.self, forKey: .anti)
+        errorCode = container.decodeStringIfPresent(forKey: .errorCode)
+        errorMessage = container.decodeStringIfPresent(forKey: .errorMessage)
+    }
+}
+
+struct InitNicknameResponseDTO: Decodable {
+    struct UserInfo: Decodable {
+        var nameShow: String
+        var tiebaUid: String?
+        var userName: String?
+        var userNickname: String?
+
+        enum CodingKeys: String, CodingKey {
+            case nameShow = "name_show"
+            case tiebaUid = "tieba_uid"
+            case userName = "user_name"
+            case userNickname = "user_nickname"
+        }
+    }
+
+    var userInfo: UserInfo?
+
+    enum CodingKeys: String, CodingKey {
+        case userInfo = "user_info"
+    }
+}
+
+struct WebMyInfoResponseDTO: Decodable {
+    struct DataDTO: Decodable {
+        var id: String?
+        var uid: String?
+        var name: String?
+        var nameShow: String?
+        var portrait: String?
+        var portraitURL: String?
+        var tbs: String?
+        var itbTbs: String?
+        var isLogin: Bool?
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case uid
+            case name
+            case nameShow = "name_show"
+            case portrait
+            case portraitURL = "portrait_url"
+            case tbs
+            case itbTbs = "itb_tbs"
+            case isLogin = "is_login"
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = container.decodeStringIfPresent(forKey: .id)
+            uid = container.decodeStringIfPresent(forKey: .uid)
+            name = container.decodeStringIfPresent(forKey: .name)
+            nameShow = container.decodeStringIfPresent(forKey: .nameShow)
+            portrait = container.decodeStringIfPresent(forKey: .portrait)
+            portraitURL = container.decodeStringIfPresent(forKey: .portraitURL)
+            tbs = container.decodeStringIfPresent(forKey: .tbs)
+            itbTbs = container.decodeStringIfPresent(forKey: .itbTbs)
+            isLogin = try? container.decodeIfPresent(Bool.self, forKey: .isLogin)
+            if isLogin == nil, let text = container.decodeStringIfPresent(forKey: .isLogin) {
+                isLogin = text != "0" && text.lowercased() != "false"
+            }
+        }
+    }
+
+    var no: Int?
+    var error: String?
+    var data: DataDTO?
+}
+
+enum LoginValidationError: Error, Equatable, CustomStringConvertible {
+    case missingAccountInfo
+
+    var description: String {
+        switch self {
+        case .missingAccountInfo:
+            return "登录 Cookie 已获取，但贴吧没有返回可用的账号资料，请重新登录。"
+        }
+    }
+}
+
+private extension String {
+    var nonEmpty: String? {
+        isEmpty ? nil : self
+    }
+}
+
+extension TiebaAPI {
+    func personalizedThreads(account: Account?, page: Int, loadType: Int) async throws -> [ThreadSummary] {
+        let requestPage = try TiebaRequestValuePolicy.unsignedPage(page)
+        var requestData = Tieba_PersonalizedRequestData()
+        requestData.appPos = Tieba_AppPosInfo()
+        requestData.common = requestBuilder.common(account: account)
+        requestData.loadType = UInt32(loadType)
+        requestData.pn = requestPage
+        requestData.needTags = 0
+        requestData.pageThreadCount = 11
+        requestData.preAdThreadCount = 0
+        requestData.sugCount = 0
+        requestData.tagCode = 0
+        requestData.qType = 1
+        requestData.needForumlist = 0
+        requestData.newNetType = 1
+        requestData.newInstall = 0
+        requestData.requestTimes = 0
+        requestData.invokeSource = ""
+        requestData.scrDip = requestBuilder.screenScale
+        requestData.scrH = Int32(requestBuilder.screenHeight)
+        requestData.scrW = Int32(requestBuilder.screenWidth)
+
+        var request = Tieba_PersonalizedRequest()
+        request.data = requestData
+
+        let multipart = try requestBuilder.multipart(protobuf: request, account: account, includeSToken: false)
+        let response = try await client.postProtobuf(
+            .personalized,
+            body: multipart.body,
+            contentType: multipart.contentType,
+            headers: [
+                "X-BD-DATA-TYPE": "protobuf",
+                "Cookie": "ka=open"
+            ],
+            as: Tieba_PersonalizedResponse.self
+        )
+
+        try validateTiebaError(response.error)
+        guard response.hasData else { throw TiebaAPIError.emptyResponse }
+
+        return response.data.threadList
+            .filter(TiebaContentFilter.shouldMap(thread:))
+            .map { ThreadMapper.fromThreadInfo($0, usersByID: [:]) }
+    }
+
+    func followedForums(account: Account) async throws -> [Forum] {
+        let response = try await client.postForm(
+            .followedForums,
+            fields: [
+                "BDUSS": account.bduss,
+                "stoken": account.stoken,
+                "user_id": account.uid,
+                "_client_version": "11.10.8.6"
+            ],
+            headers: ["User-Agent": "bdtb for Android 11.10.8.6"],
+            as: FollowedForumsDTO.self
+        )
+
+        try validateResponseCode(response.errorCode, message: response.errorMessage)
+
+        return response.forums.map(ForumMapper.fromFollowedForum)
+    }
+
+    func forumThreads(
+        account: Account?,
+        forumName: String,
+        page: Int,
+        category: ForumThreadCategory = .replyTime
+    ) async throws -> [ThreadSummary] {
+        _ = try TiebaRequestValuePolicy.signedPage(page)
+        guard let account else {
+            return try await forumThreadsForm(
+                forumName: forumName,
+                page: page,
+                category: category
+            )
+        }
+
+        do {
+            return try await forumThreadsProtobuf(
+                account: account,
+                forumName: forumName,
+                page: page,
+                category: category
+            )
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            guard Self.shouldFallbackFromForumProtobuf(error) else { throw error }
+            return try await forumThreadsForm(
+                forumName: forumName,
+                page: page,
+                category: category
+            )
+        }
+    }
+
+    private func forumThreadsProtobuf(
+        account: Account,
+        forumName: String,
+        page: Int,
+        category: ForumThreadCategory
+    ) async throws -> [ThreadSummary] {
+        var requestData = Tieba_FrsPage_FrsPageRequestData()
+        requestData.adParam = Tieba_FrsPage_AdParam()
+        requestData.appPos = Tieba_AppPosInfo()
+        requestData.common = requestBuilder.common(account: account)
+        requestData.kw = forumName
+        requestData.loadType = page == 1 ? 1 : 2
+        requestData.pn = try TiebaRequestValuePolicy.signedPage(page)
+        requestData.qType = 2
+        requestData.rn = 90
+        requestData.rnNeed = 30
+        requestData.scrDip = requestBuilder.screenScale
+        requestData.scrH = Int32(requestBuilder.screenHeight)
+        requestData.scrW = Int32(requestBuilder.screenWidth)
+        requestData.sortType = Int32(category.sortType)
+        if let goodClassifyID = category.goodClassifyID {
+            requestData.isGood = 1
+            requestData.cid = Int32(goodClassifyID)
+        }
+        requestData.stType = "recom_flist"
+        requestData.withGroup = 1
+
+        var request = Tieba_FrsPage_FrsPageRequest()
+        request.data = requestData
+
+        let multipart = try requestBuilder.multipart(protobuf: request, account: account, includeSToken: true)
+        let response = try await client.postProtobuf(
+            .frsPage,
+            body: multipart.body,
+            contentType: multipart.contentType,
+            as: Tieba_FrsPage_FrsPageResponse.self
+        )
+        try validateTiebaError(response.error)
+        guard response.hasData else { throw TiebaAPIError.emptyResponse }
+
+        var usersByID: [Int64: Tieba_User] = [:]
+        for user in response.data.userList {
+            usersByID[user.id] = user
+        }
+
+        return response.data.threadList
+            .filter(TiebaContentFilter.shouldMap(thread:))
+            .map { ThreadMapper.fromThreadInfo($0, usersByID: usersByID) }
+    }
+
+    private func forumThreadsForm(
+        forumName: String,
+        page: Int,
+        category: ForumThreadCategory
+    ) async throws -> [ThreadSummary] {
+        let cuid = requestBuilder.miniCUID
+        var fields = requestBuilder.miniCommonFields()
+        fields.merge([
+            "kw": forumName,
+            "pn": "\(page)",
+            "sort_type": "\(category.sortType)",
+            "q_type": "2",
+            "st_type": "tb_forumlist",
+            "with_group": "0",
+            "rn": "20",
+            "scr_dip": "\(requestBuilder.screenScale)",
+            "scr_h": "\(requestBuilder.screenHeight)",
+            "scr_w": "\(requestBuilder.screenWidth)"
+        ]) { current, _ in current }
+        if let goodClassifyID = category.goodClassifyID {
+            fields["is_good"] = "1"
+            fields["cid"] = "\(goodClassifyID)"
+        }
+
+        let response = try await client.postForm(
+            .forumPageForm,
+            fields: fields,
+            headers: [
+                "User-Agent": "bdtb for Android \(TiebaClientVersion.mini.rawValue)",
+                "Cookie": "ka=open",
+                "Pragma": "no-cache",
+                "cuid": cuid,
+                "cuid_galaxy2": cuid
+            ],
+            signingSecret: "tiebaclient!!!",
+            as: MiniForumPageDTO.self
+        )
+
+        try validateResponseCode(response.errorCode, message: response.errorMessage)
+
+        return response.threadList
+            .filter(\.shouldKeep)
+            .map { $0.threadSummary(usersByID: response.usersByID, forumName: forumName) }
+    }
+}
+
+extension TiebaAPI {
+    func threadPage(
+        account: Account?,
+        threadID: Int64,
+        page: Int,
+        forumID: Int64? = nil,
+        postID: UInt64? = nil,
+        seeLz: Bool = false,
+        sortType: ThreadReplySort = .ascending
+    ) async throws -> ThreadPage {
+        let requestPage = try TiebaRequestValuePolicy.signedPage(page)
+        var requestData = Tieba_PbPage_PbPageRequestData()
+        requestData.common = requestBuilder.common(account: account)
+        requestData.kz = threadID
+        requestData.pn = requestPage
+        requestData.r = Int32(sortType.rawValue)
+        if let postID {
+            requestData.pid = try TiebaRequestValuePolicy.signedIdentifier(postID)
+            if page <= 1 {
+                // An explicit page number overrides post-ID targeting on the
+                // server. pn=0 asks it to locate the page containing pid.
+                requestData.pn = 0
+            }
+        }
+        requestData.lz = seeLz ? 1 : 0
+        requestData.forumID = forumID ?? 0
+        requestData.mark = 0
+        requestData.floorRn = 4
+        requestData.floorSortType = 1
+        requestData.qType = 2
+        requestData.rn = 15
+        requestData.scrDip = requestBuilder.screenScale
+        requestData.scrH = Int32(requestBuilder.screenHeight)
+        requestData.scrW = Int32(requestBuilder.screenWidth)
+        requestData.sourceType = 2
+        requestData.withFloor = 1
+
+        var request = Tieba_PbPage_PbPageRequest()
+        request.data = requestData
+
+        let multipart = try requestBuilder.multipart(protobuf: request, account: account, includeSToken: true)
+        let response = try await client.postProtobuf(
+            .pbPage,
+            body: multipart.body,
+            contentType: multipart.contentType,
+            as: Tieba_PbPage_PbPageResponse.self
+        )
+        try validateTiebaError(response.error)
+        guard response.hasData else { throw TiebaAPIError.emptyResponse }
+        return PostMapper.threadPage(from: response)
+    }
+
+    func subposts(
+        account: Account?,
+        threadID: Int64,
+        postID: UInt64,
+        forumID: Int64,
+        page: Int,
+        subpostID: UInt64 = 0
+    ) async throws -> [Subpost] {
+        let requestPage = try TiebaRequestValuePolicy.signedPage(page)
+        let requestPostID = try TiebaRequestValuePolicy.signedIdentifier(postID)
+        let requestSubpostID = try TiebaRequestValuePolicy.signedIdentifier(subpostID)
+        var requestData = Tieba_PbFloor_PbFloorRequestData()
+        requestData.common = requestBuilder.common(account: account)
+        requestData.forumID = forumID
+        requestData.kz = threadID
+        requestData.pid = requestPostID
+        requestData.pn = requestPage
+        requestData.spid = requestSubpostID
+        requestData.scrDip = requestBuilder.screenScale
+        requestData.scrH = Int32(requestBuilder.screenHeight)
+        requestData.scrW = Int32(requestBuilder.screenWidth)
+        requestData.isCommReverse = 0
+        requestData.oriUgcType = 0
+
+        var request = Tieba_PbFloor_PbFloorRequest()
+        request.data = requestData
+
+        let multipart = try requestBuilder.multipart(protobuf: request, account: account, includeSToken: false)
+        let response = try await client.postProtobuf(
+            .pbFloor,
+            body: multipart.body,
+            contentType: multipart.contentType,
+            as: Tieba_PbFloor_PbFloorResponse.self
+        )
+        try validateTiebaError(response.error)
+        guard response.hasData else { throw TiebaAPIError.emptyResponse }
+        let protos = response.data.subpostList
+        var usersByID: [Int64: Tieba_User] = [:]
+        for proto in protos where proto.hasAuthor && proto.author.id > 0 {
+            usersByID[proto.author.id] = proto.author
+        }
+        if response.data.hasPost,
+           response.data.post.hasAuthor,
+           response.data.post.author.id > 0 {
+            usersByID[response.data.post.author.id] = response.data.post.author
+        }
+        // Keep the service page cardinality intact. The presentation layer
+        // applies the current blocklist after using this raw count to decide
+        // whether the next page may exist.
+        return protos.map { PostMapper.subpost($0, usersByID: usersByID) }
+    }
+
+    static func shouldFallbackFromForumProtobuf(_ error: Error) -> Bool {
+        if error is CancellationError || error is URLError || error is TiebaHTTPError || error is TiebaAPIError {
+            return false
+        }
+        return error is DecodingError
+            || TiebaProtobufErrorClassifier.isDecodeFailure(error)
+    }
+
+    private func validateTiebaError(_ error: Tieba_Error) throws {
+        try validateResponseCode(
+            Int(error.errorCode),
+            message: error.userMsg.isEmpty ? error.errorMsg : error.userMsg
+        )
+    }
+
+    private func validateResponseCode(_ code: Int, message: String) throws {
+        try TiebaResponseValidator.validate(code: code, message: message)
+    }
+}
+
+struct FollowedForumsDTO: Decodable {
+    struct ForumDTO: Decodable {
+        var id: Int64
+        var name: String
+        var avatar: String?
+
+        enum CodingKeys: String, CodingKey {
+            case forumID = "forum_id"
+            case forumName = "forum_name"
+            case avatar
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let idText = container.decodeStringIfPresent(forKey: .forumID) ?? "0"
+            id = Int64(idText) ?? 0
+            name = container.decodeStringIfPresent(forKey: .forumName) ?? ""
+            avatar = try container.decodeIfPresent(String.self, forKey: .avatar)
+        }
+    }
+
+    var forums: [ForumDTO]
+    var errorCode: Int
+    var errorMessage: String
+
+    enum CodingKeys: String, CodingKey {
+        case forumInfo = "forum_info"
+        case errorCode = "error_code"
+        case errorMessage = "error_msg"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        forums = try container.decodeIfPresent([ForumDTO].self, forKey: .forumInfo) ?? []
+        errorCode = Int(container.decodeStringIfPresent(forKey: .errorCode) ?? "") ?? 0
+        errorMessage = container.decodeStringIfPresent(forKey: .errorMessage) ?? ""
+    }
+}
+
+private struct MiniForumPageDTO: Decodable {
+    var errorCode: Int
+    var errorMessage: String
+    var threadList: [ThreadDTO]
+    var userList: [UserDTO]
+
+    var usersByID: [Int64: UserDTO] {
+        var result: [Int64: UserDTO] = [:]
+        for user in userList {
+            result[user.id] = user
+        }
+        return result
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case errorCode = "error_code"
+        case errorMessage = "error_msg"
+        case threadList = "thread_list"
+        case userList = "user_list"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        errorCode = Int(container.decodeStringIfPresent(forKey: .errorCode) ?? "") ?? 0
+        errorMessage = container.decodeStringIfPresent(forKey: .errorMessage) ?? ""
+        threadList = try container.decodeIfPresent([ThreadDTO].self, forKey: .threadList) ?? []
+        userList = try container.decodeIfPresent([UserDTO].self, forKey: .userList) ?? []
+    }
+
+    struct UserDTO: Decodable {
+        var id: Int64
+        var name: String
+        var displayName: String
+        var portrait: String
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case nameShow = "name_show"
+            case nick
+            case portrait
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = Int64(container.decodeStringIfPresent(forKey: .id) ?? "") ?? 0
+            name = container.decodeStringIfPresent(forKey: .name) ?? ""
+            displayName = container.decodeStringIfPresent(forKey: .nameShow)
+                ?? container.decodeStringIfPresent(forKey: .nick)
+                ?? name
+            portrait = container.decodeStringIfPresent(forKey: .portrait) ?? ""
+        }
+    }
+
+    struct ThreadDTO: Decodable {
+        var id: Int64
+        var title: String
+        var replyCount: Int
+        var viewCount: Int
+        var likeCount: Int
+        var lastReplyAt: Date?
+        var createdAt: Date?
+        var authorID: Int64
+        var isTop: Bool
+        var isGood: Bool
+        var abstractText: String
+        var media: [MediaDTO]
+        var videoInfo: VideoDTO?
+        var voiceInfo: [VoiceDTO]
+        var isVoiceThread: Bool
+        var hasAdvertisement: Bool
+        var hasLiveInfo: Bool
+        var isDeleted: Bool
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case tid
+            case title
+            case replyCount = "reply_num"
+            case viewCount = "view_num"
+            case likeCount = "agree_num"
+            case likeCountCamel = "agreeNum"
+            case lastTimeInt = "last_time_int"
+            case createTime = "create_time"
+            case authorID = "author_id"
+            case isTop = "is_top"
+            case isGood = "is_good"
+            case abstractBlocks = "abstract"
+            case media
+            case videoInfo = "video_info"
+            case voiceInfo = "voice_info"
+            case isVoiceThread = "is_voice_thread"
+            case isDeleted = "is_deleted"
+            case adInfo = "ad_info"
+            case adThread = "is_ad"
+            case alaInfo = "ala_info"
+            case twzhiboInfo = "twzhibo_info"
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = Int64(container.decodeStringIfPresent(forKey: .id)
+                ?? container.decodeStringIfPresent(forKey: .tid)
+                ?? "") ?? 0
+            title = container.decodeStringIfPresent(forKey: .title) ?? ""
+            replyCount = Int(container.decodeStringIfPresent(forKey: .replyCount) ?? "") ?? 0
+            viewCount = Int(container.decodeStringIfPresent(forKey: .viewCount) ?? "") ?? 0
+            likeCount = Int(
+                container.decodeStringIfPresent(forKey: .likeCount)
+                    ?? container.decodeStringIfPresent(forKey: .likeCountCamel)
+                    ?? ""
+            ) ?? 0
+            authorID = Int64(container.decodeStringIfPresent(forKey: .authorID) ?? "") ?? 0
+            isTop = container.decodeStringIfPresent(forKey: .isTop) == "1"
+            isGood = container.decodeStringIfPresent(forKey: .isGood) == "1"
+            lastReplyAt = container.decodeDateIfPresent(forKey: .lastTimeInt)
+            createdAt = container.decodeDateIfPresent(forKey: .createTime)
+            media = try container.decodeIfPresent([MediaDTO].self, forKey: .media) ?? []
+            videoInfo = try container.decodeIfPresent(VideoDTO.self, forKey: .videoInfo)
+            if let voices = try? container.decode([VoiceDTO].self, forKey: .voiceInfo) {
+                voiceInfo = voices
+            } else if let voice = try? container.decode(VoiceDTO.self, forKey: .voiceInfo) {
+                voiceInfo = [voice]
+            } else {
+                voiceInfo = []
+            }
+            isVoiceThread = container.decodeStringIfPresent(forKey: .isVoiceThread) == "1"
+            isDeleted = container.decodeStringIfPresent(forKey: .isDeleted) == "1"
+            hasAdvertisement = container.decodeStringIfPresent(forKey: .adThread) == "1"
+                || container.contains(.adInfo)
+            hasLiveInfo = container.contains(.alaInfo) || container.contains(.twzhiboInfo)
+
+            if let text = container.decodeStringIfPresent(forKey: .abstractBlocks) {
+                abstractText = text
+            } else {
+                let blocks = try container.decodeIfPresent([AbstractDTO].self, forKey: .abstractBlocks) ?? []
+                abstractText = blocks.map(\.text).joined()
+            }
+        }
+
+        var shouldKeep: Bool {
+            id != 0
+                && title.isEmpty == false
+                && hasAdvertisement == false
+                && hasLiveInfo == false
+                && isDeleted == false
+        }
+
+        func threadSummary(usersByID: [Int64: UserDTO], forumName: String) -> ThreadSummary {
+            let user = usersByID[authorID]
+            var blocks: [ContentBlock] = []
+            if abstractText.isEmpty == false {
+                blocks.append(contentsOf: TiebaEmoticon.blocks(from: abstractText))
+            }
+            blocks.append(contentsOf: media.compactMap(\.imageBlock))
+            if let videoBlock = videoInfo?.videoBlock {
+                blocks.append(videoBlock)
+            }
+            var mappedVoiceMD5s = Set<String>()
+            for voice in voiceInfo.compactMap(\.voiceContent) {
+                guard mappedVoiceMD5s.insert(voice.md5).inserted else { continue }
+                blocks.append(.voice(voice))
+            }
+            if isVoiceThread,
+               mappedVoiceMD5s.isEmpty,
+               blocks.contains(where: { $0.plainText?.contains("[语音]") == true }) == false {
+                blocks.append(.text("[语音]"))
+            }
+
+            return ThreadSummary(
+                id: id,
+                forumID: nil,
+                title: title,
+                author: UserSummary(
+                    id: authorID,
+                    name: user?.name ?? "",
+                    displayName: user?.displayName ?? "",
+                    portrait: user?.portrait ?? ""
+                ),
+                forumName: forumName,
+                replyCount: replyCount,
+                viewCount: viewCount,
+                likeCount: likeCount,
+                createdAt: createdAt,
+                lastReplyAt: lastReplyAt,
+                blocks: blocks,
+                isTop: isTop,
+                isGood: isGood,
+                hasVideo: videoInfo != nil
+            )
+        }
+    }
+
+    struct VoiceDTO: Decodable {
+        var voiceMD5: String
+        var durationMilliseconds: Int
+
+        enum CodingKeys: String, CodingKey {
+            case voiceMD5 = "voice_md5"
+            case durationMilliseconds = "during_time"
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            voiceMD5 = container.decodeStringIfPresent(forKey: .voiceMD5) ?? ""
+            durationMilliseconds = Int(
+                container.decodeStringIfPresent(forKey: .durationMilliseconds) ?? ""
+            ) ?? 0
+        }
+
+        var voiceContent: VoiceContent? {
+            VoiceContent(md5: voiceMD5, durationMilliseconds: durationMilliseconds)
+        }
+    }
+
+    struct AbstractDTO: Decodable {
+        var text: String
+
+        enum CodingKeys: String, CodingKey {
+            case text
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            text = container.decodeStringIfPresent(forKey: .text) ?? ""
+        }
+    }
+
+    struct MediaDTO: Decodable {
+        var thumbnailURL: URL?
+        var originalURL: URL?
+        var showOriginalButton: Bool
+
+        enum CodingKeys: String, CodingKey {
+            case bigPic = "big_pic"
+            case dynamicPic = "dynamic_pic"
+            case srcPic = "src_pic"
+            case originPic = "origin_pic"
+            case showOriginalButton = "show_original_btn"
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            thumbnailURL = TiebaURL.make(container.decodeStringIfPresent(forKey: .srcPic)
+                ?? container.decodeStringIfPresent(forKey: .bigPic)
+                ?? container.decodeStringIfPresent(forKey: .dynamicPic))
+            originalURL = TiebaURL.make(container.decodeStringIfPresent(forKey: .originPic)
+                ?? container.decodeStringIfPresent(forKey: .bigPic)
+                ?? container.decodeStringIfPresent(forKey: .srcPic))
+            showOriginalButton = container.decodeStringIfPresent(forKey: .showOriginalButton) == "1"
+        }
+
+        var imageBlock: ContentBlock? {
+            guard thumbnailURL != nil || originalURL != nil else { return nil }
+            return .image(ImageContent(
+                thumbnailURL: thumbnailURL,
+                originalURL: originalURL,
+                width: 1,
+                height: 1,
+                showOriginalButton: showOriginalButton
+            ))
+        }
+    }
+
+    struct VideoDTO: Decodable {
+        var videoURL: URL?
+        var coverURL: URL?
+
+        enum CodingKeys: String, CodingKey {
+            case videoURL = "video_url"
+            case originVideoURL = "origin_video_url"
+            case thumbnailURL = "thumbnail_url"
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            videoURL = TiebaURL.make(container.decodeStringIfPresent(forKey: .originVideoURL)
+                ?? container.decodeStringIfPresent(forKey: .videoURL))
+            coverURL = TiebaURL.make(container.decodeStringIfPresent(forKey: .thumbnailURL))
+        }
+
+        var videoBlock: ContentBlock? {
+            guard videoURL != nil || coverURL != nil else { return nil }
+            return .video(VideoContent(
+                videoURL: videoURL,
+                coverURL: coverURL,
+                webURL: nil,
+                width: 16,
+                height: 9,
+                duration: 0
+            ))
+        }
+    }
+}
+
+enum TiebaAPIError: Error, Equatable, CustomStringConvertible {
+    case response(code: Int, message: String)
+    case sessionExpired(code: Int, message: String)
+    case emptyResponse
+    case missingMainPost
+
+    private static let unambiguousSessionExpiredCodes: Set<Int> = [
+        110001,
+        110002,
+        110003,
+        110004
+    ]
+
+    static func isSessionExpired(code: Int, message: String) -> Bool {
+        if unambiguousSessionExpiredCodes.contains(code) {
+            return true
+        }
+        guard code == 4 else { return false }
+
+        let normalized = message
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return [
+            "未登录",
+            "未登陆",
+            "请先登录",
+            "请先登陆",
+            "重新登录",
+            "重新登陆",
+            "登录失效",
+            "登陆失效",
+            "登录已失效",
+            "登陆已失效",
+            "登录过期",
+            "登陆过期",
+            "not logged",
+            "login expired",
+            "session expired"
+        ].contains { normalized.contains($0) }
+    }
+
+    var description: String {
+        switch self {
+        case let .response(code, message):
+            return message.isEmpty ? "Tieba API error \(code)" : message
+        case let .sessionExpired(code, message):
+            return message.isEmpty ? "登录已失效（\(code)）" : message
+        case .emptyResponse:
+            return "服务器返回了空数据，请稍后重试。"
+        case .missingMainPost:
+            return "服务器未返回帖子主楼，请刷新后重试。"
+        }
+    }
+}
+
+enum TiebaResponseValidator {
+    static func validate(code: Int, message: String) throws {
+        guard code != 0 else { return }
+        if TiebaAPIError.isSessionExpired(code: code, message: message) {
+            throw TiebaAPIError.sessionExpired(code: code, message: message)
+        }
+        throw TiebaAPIError.response(code: code, message: message)
+    }
+}
+
+enum TiebaRequestValidationError: Error, Equatable {
+    case invalidPage(Int)
+    case invalidIdentifier(UInt64)
+}
+
+enum TiebaRequestValuePolicy {
+    static func signedPage(_ page: Int) throws -> Int32 {
+        guard page > 0, let value = Int32(exactly: page) else {
+            throw TiebaRequestValidationError.invalidPage(page)
+        }
+        return value
+    }
+
+    static func unsignedPage(_ page: Int) throws -> UInt32 {
+        guard page > 0, let value = UInt32(exactly: page) else {
+            throw TiebaRequestValidationError.invalidPage(page)
+        }
+        return value
+    }
+
+    static func signedIdentifier(_ identifier: UInt64) throws -> Int64 {
+        guard let value = Int64(exactly: identifier) else {
+            throw TiebaRequestValidationError.invalidIdentifier(identifier)
+        }
+        return value
+    }
+}
+
+enum TiebaPaginationPolicy {
+    static func nextPage(requestedPage: Int, responseCurrentPage: Int) -> Int? {
+        let currentPage = max(requestedPage, responseCurrentPage)
+        guard currentPage > 0, currentPage < Int(Int32.max) else { return nil }
+        return currentPage + 1
+    }
+}
+
+private extension KeyedDecodingContainer {
+    func decodeStringIfPresent(forKey key: Key) -> String? {
+        if let value = try? decodeIfPresent(String.self, forKey: key) {
+            return value
+        }
+        if let value = try? decodeIfPresent(Int.self, forKey: key) {
+            return String(value)
+        }
+        if let value = try? decodeIfPresent(Int64.self, forKey: key) {
+            return String(value)
+        }
+        if let value = try? decodeIfPresent(Decimal.self, forKey: key) {
+            return NSDecimalNumber(decimal: value).stringValue
+        }
+        if let value = try? decodeIfPresent(Double.self, forKey: key) {
+            return String(value)
+        }
+        return nil
+    }
+
+    func decodeDateIfPresent(forKey key: Key) -> Date? {
+        guard let text = decodeStringIfPresent(forKey: key), let seconds = TimeInterval(text) else {
+            return nil
+        }
+        return Date(timeIntervalSince1970: seconds)
+    }
+}
+
+// Profile post lists omit forum avatars. Fetch small forum metadata separately
+// so they never block the post feed's first paint or refresh transaction.
+extension TiebaAPI {
+    func forumMetadata(named name: String) async throws -> Forum? {
+        var fields = requestBuilder.miniCommonFields()
+        fields.merge(["kw": name, "pn": "1", "rn": "1", "q_type": "2", "with_group": "0"]) { _, new in new }
+        let response = try await client.postForm(
+            .forumPageForm, fields: fields,
+            headers: ["User-Agent": "bdtb for Android \(TiebaClientVersion.mini.rawValue)", "Cookie": "ka=open"],
+            signingSecret: "tiebaclient!!!", as: FollowingForumMetadataResponse.self
+        )
+        try validateResponseCode(response.errorCode, message: response.errorMessage)
+        guard let item = response.forum else { return nil }
+        return Forum(id: item.id, name: item.name.isEmpty ? name : item.name,
+                     displayName: item.name.isEmpty ? name : item.name,
+                     avatarURL: TiebaURL.make(item.avatar), memberCount: 0, threadCount: 0)
+    }
+}
+
+struct FollowingForumMetadataResponse: Decodable {
+    struct Item: Decodable {
+        let id: Int64
+        let name: String
+        let avatar: String
+        enum CodingKeys: String, CodingKey { case id, name, avatar }
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            id = Int64(c.decodeStringIfPresent(forKey: .id) ?? "") ?? 0
+            name = c.decodeStringIfPresent(forKey: .name) ?? ""
+            avatar = c.decodeStringIfPresent(forKey: .avatar) ?? ""
+        }
+    }
+    let errorCode: Int
+    let errorMessage: String
+    let forum: Item?
+    enum CodingKeys: String, CodingKey {
+        case errorCode = "error_code", errorMessage = "error_msg", forum
+    }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        errorCode = Int(c.decodeStringIfPresent(forKey: .errorCode) ?? "") ?? 0
+        errorMessage = c.decodeStringIfPresent(forKey: .errorMessage) ?? ""
+        forum = try c.decodeIfPresent(Item.self, forKey: .forum)
+    }
+}

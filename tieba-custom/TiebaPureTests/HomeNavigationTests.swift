@@ -144,6 +144,24 @@ private final class RecordingTabDelegate: NSObject, UITabBarControllerDelegate {
 }
 
 final class FollowingFeedRegressionTests: XCTestCase {
+    func testForumMetadataAcceptsStringAndNumericIdentifiers() throws {
+        for rawID in ["123", "\"123\""] {
+            let json = "{\"error_code\":\"0\",\"forum\":{\"id\":\(rawID),\"name\":\"test\",\"avatar\":\"https://example.com/forum.png\"}}"
+            let response = try JSONDecoder().decode(FollowingForumMetadataResponse.self, from: Data(json.utf8))
+            XCTAssertEqual(response.errorCode, 0)
+            XCTAssertEqual(response.forum?.id, 123)
+            XCTAssertEqual(response.forum?.avatar, "https://example.com/forum.png")
+        }
+    }
+
+    func testForumMetadataErrorWithoutForumStillDecodes() throws {
+        let json = #"{"error_code":1,"error_msg":"unavailable"}"#
+        let response = try JSONDecoder().decode(FollowingForumMetadataResponse.self, from: Data(json.utf8))
+        XCTAssertNil(response.forum)
+        XCTAssertEqual(response.errorCode, 1)
+        XCTAssertEqual(response.errorMessage, "unavailable")
+    }
+
     private func user(_ id: Int64) -> UserSummary {
         UserSummary(id: id, name: "user", displayName: "user", portrait: "")
     }

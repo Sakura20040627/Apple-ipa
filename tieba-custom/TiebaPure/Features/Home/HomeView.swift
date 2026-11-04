@@ -13,6 +13,8 @@ struct HomeView: View {
     @ObservedObject private var blocklistStore = BlocklistStore.shared
     @State private var activeSearch: SearchRoute?
     @State private var threads: [ThreadSummary] = []
+    @State private var forumMetadataByName: [String: Forum] = [:]
+    @State private var loadingForumNames: Set<String> = []
     @State private var followingUsers: [UserSummary] = []
     @State private var remainingUserIDs: Set<Int64> = []
     @State private var userNextPages: [Int64: Int] = [:]
@@ -353,7 +355,7 @@ struct HomeView: View {
             LazyVStack(spacing: TiebaPureTheme.Spacing.sm, pinnedViews: []) {
                 ForEach(Array(threads.enumerated()), id: \.element.id) { index, thread in
                     ForumThreadRow(
-                        thread: thread,
+                        thread: threadWithForumMetadata(thread),
                         presentation: .homeFeed,
                         onOpenThread: {
                             openThread(thread)
@@ -408,6 +410,9 @@ struct HomeView: View {
                         commentsAccessibilityIdentifier: "home-comments-button-\(thread.id)",
                         likesAccessibilityIdentifier: "home-like-button-\(thread.id)"
                     )
+                    .task(id: thread.forumName) {
+                        await loadForumMetadata(for: thread)
+                    }
                     .onAppear {
                         requestLoadMoreIfNeeded(currentIndex: index, totalCount: threads.count)
                     }
@@ -560,6 +565,43 @@ struct HomeView: View {
         .background(TiebaPureTheme.ColorToken.readerGroupedBackground)
     }
 
+    private func threadWithForumMetadata(_ thread: ThreadSummary) -> ThreadSummary {
+        guard let name = thread.forumName,
+              let forum = forumMetadataByName[name] else { return thread }
+        var result = thread
+        result.forumAvatarURL = thread.forumAvatarURL ?? forum.avatarURL
+        if result.forumID == nil { result.forumID = forum.id }
+        return result
+    }
+
+    private func loadForumMetadata(for thread: ThreadSummary) async {
+        guard thread.forumAvatarURL == nil, let name = thread.forumName,
+              forumMetadataByName[name] == nil,
+              loadingForumNames.contains(name) == false else { return }
+        // Recent forums already carry the same service-provided avatar URL.
+        if let cached = RecentForumStore.shared.items.first(where: { $0.forum.name == name })?.forum,
+           cached.avatarURL != nil {
+            forumMetadataByName[name] = cached
+            return
+        }
+        loadingForumNames.insert(name)
+        defer { loadingForumNames.remove(name) }
+        do {
+            let forum = try await FollowingFeedTimeout.run {
+                try await environment.api.forumMetadata(named: name)
+            }
+            try Task.checkCancellation()
+            if let forum, forum.avatarURL != nil {
+                var transaction = Transaction(animation: nil)
+                transaction.disablesAnimations = true
+                withTransaction(transaction) { forumMetadataByName[name] = forum }
+            }
+        } catch {
+            // Avatar failure never blocks reading or refreshing posts. A later
+            // appearance can retry; successful metadata is cached by forum.
+        }
+    }
+
     private func reload() async {
         loadTask?.cancel()
         requestGeneration += 1
@@ -603,6 +645,7 @@ struct HomeView: View {
             let cachedUsers = followingUsers
             let remainingIDs = remainingUserIDs
             let cachedPages = userNextPages
+            let streamsInitialLoad = threads.isEmpty && requestedPage == 1
             let task = Task {
                 guard let account else {
                     return FollowingFeedBatch(users: [], threads: [], remainingUserIDs: [], nextPages: [:], failureCount: 0)
@@ -646,7 +689,7 @@ struct HomeView: View {
                             }
                         },
                         onPage: { incoming in
-                            guard generation == requestGeneration,
+                            guard streamsInitialLoad, generation == requestGeneration,
                                   requestedSession == self.account?.sessionIdentity else { return }
                             guard incoming.isEmpty == false else { return }
                             if requestedPage == 1 && replacedRefresh == false {
@@ -686,14 +729,21 @@ struct HomeView: View {
             remainingUserIDs = batch.remainingUserIDs
             userNextPages = batch.nextPages
             let visibleNext = next.filter(TiebaContentFilter.shouldKeep(thread:))
+            // Refresh commits once. Keep old rows in place until the complete
+            // snapshot is ready; async completion order must not move the list.
+            let merged: [ThreadSummary]
             if requestedPage == 1 {
-                threads = HomeFeedMerge.append(existing: [], incoming: visibleNext, maximumItemCount: Int.max)
+                merged = batch.failureCount > 0
+                    ? HomeFeedMerge.refresh(existing: threads, incoming: visibleNext, maximumItemCount: Int.max)
+                    : HomeFeedMerge.append(existing: [], incoming: visibleNext, maximumItemCount: Int.max)
             } else {
-                threads = HomeFeedMerge.append(existing: threads, incoming: visibleNext, maximumItemCount: Int.max)
+                merged = HomeFeedMerge.append(existing: threads, incoming: visibleNext, maximumItemCount: Int.max)
             }
-            // Pagination follows the service page, not the number left after
-            // applying local block rules.
-            threads = FollowingFeedLoader.sorted(threads)
+            var transaction = Transaction(animation: nil)
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                threads = FollowingFeedLoader.sorted(merged)
+            }
             if batch.failureCount > 0 {
                 errorMessage = "有 \(batch.failureCount) 位关注用户的帖子暂时未能加载，已显示其他内容，请重试。"
             }
@@ -749,10 +799,8 @@ struct HomeView: View {
             currentIndex: currentIndex,
             totalCount: totalCount
         ) else { return }
-        if isLoading {
-            pendingPaginationRequest = true
-            return
-        }
+        // Row appearances during refresh must not enqueue another page load.
+        guard isLoading == false else { return }
         guard paginationRequestScheduled == false else { return }
         paginationRequestScheduled = true
         Task {

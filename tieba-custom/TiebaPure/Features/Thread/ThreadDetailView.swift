@@ -2586,7 +2586,27 @@ private struct ReplyControlBar: View {
         }
         .padding(.horizontal, TiebaPureTheme.Spacing.md)
         .frame(minHeight: controlHeight, alignment: .center)
-        .background(.regularMaterial)
+        .background {
+            Rectangle().fill(.regularMaterial)
+                .overlay {
+                    LinearGradient(
+                        colors: [Color.primary.opacity(0.025), .clear, Color.primary.opacity(0.015)],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                }
+        }
+        .overlay(alignment: .top) {
+            LinearGradient(colors: [.clear, TiebaPureTheme.ColorToken.readerGroupedBackground.opacity(0.35)],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 8).offset(y: -8).allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+        .overlay(alignment: .bottom) {
+            LinearGradient(colors: [TiebaPureTheme.ColorToken.readerGroupedBackground.opacity(0.35), .clear],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 10).offset(y: 10).allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("thread-reply-control-bar")
     }
