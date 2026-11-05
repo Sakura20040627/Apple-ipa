@@ -58,6 +58,18 @@ struct HomeView: View {
                     }
             }
         )
+        .task(id: account?.sessionIdentity) {
+            guard let account else { return }
+            do {
+                let forums = try await FollowingFeedTimeout.run {
+                    try await environment.api.followedForums(account: account)
+                }
+                try Task.checkCancellation()
+                for forum in forums where forum.avatarURL != nil {
+                    forumMetadataByName[forum.name] = forum
+                }
+            } catch { }
+        }
         .toolbar(.visible, for: .tabBar)
         .onChange(of: horizontalSizeClass) { sizeClass in
             foldNavigationForSizeClassChange(to: sizeClass)
@@ -551,23 +563,19 @@ struct HomeView: View {
         }
         .scrollBounceBehavior(.always, axes: .vertical)
         .accessibilityIdentifier("home-feed-scroll-view")
-        .shortPullRefresh(
-            isEnabled: didLoad && isLoading == false,
-            surface: .grouped,
-            accessibilityIdentifier: "home-refresh-animation",
-            programmaticRefreshToken: programmaticRefreshToken
-        ) { source in
-            if source == .pullGesture {
-                guard isLoading == false else { return }
-            }
-            await reload()
+        .refreshable { await reload() }
+        .onChange(of: programmaticRefreshToken) { _ in
+            Task { await reload() }
         }
         .background(TiebaPureTheme.ColorToken.readerGroupedBackground)
     }
 
     private func threadWithForumMetadata(_ thread: ThreadSummary) -> ThreadSummary {
         guard let name = thread.forumName,
-              let forum = forumMetadataByName[name] else { return thread }
+              let forum = forumMetadataByName[name] ?? forumMetadataByName.values.first(where: {
+                  (thread.forumID != nil && $0.id == thread.forumID)
+                  || $0.name.filter { !$0.isWhitespace }.lowercased() == name.filter { !$0.isWhitespace }.lowercased()
+              }) else { return thread }
         var result = thread
         result.forumAvatarURL = thread.forumAvatarURL ?? forum.avatarURL
         if result.forumID == nil { result.forumID = forum.id }

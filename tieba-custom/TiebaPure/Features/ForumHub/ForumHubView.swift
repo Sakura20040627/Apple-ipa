@@ -634,6 +634,7 @@ struct ForumTile: Identifiable, Equatable {
 /// and avatar are the whole point, and a grid fits several times as many on
 /// screen.
 private struct ForumTileGrid: View {
+    @AppStorage("homeVerticalForumList") private var verticalList = false
     let tiles: [ForumTile]
     let isManaging: Bool
     let onOpen: (Forum) -> Void
@@ -644,7 +645,7 @@ private struct ForumTileGrid: View {
     ]
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: TiebaPureTheme.Spacing.md) {
+        LazyVGrid(columns: verticalList ? [GridItem(.flexible())] : columns, spacing: TiebaPureTheme.Spacing.md) {
             ForEach(tiles) { tile in
                 ForumTileButton(
                     tile: tile,
@@ -665,6 +666,7 @@ private struct ForumTileGrid: View {
 }
 
 private struct ForumTileButton: View {
+    @AppStorage("homeVerticalForumList") private var verticalList = false
     let tile: ForumTile
     let isManaging: Bool
     let onOpen: () -> Void
@@ -677,7 +679,7 @@ private struct ForumTileButton: View {
             guard isManaging == false else { return }
             onOpen()
         } label: {
-            VStack(spacing: TiebaPureTheme.Spacing.xs) {
+            (verticalList ? AnyLayout(HStackLayout(spacing: 14)) : AnyLayout(VStackLayout(spacing: TiebaPureTheme.Spacing.xs))) {
                 AvatarView(url: tile.avatarURL, title: tile.title, size: 52)
 
                 Text(tile.title)
@@ -685,8 +687,9 @@ private struct ForumTileButton: View {
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                     .truncationMode(.tail)
+                if verticalList { Spacer() }
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: verticalList ? .leading : .center)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
