@@ -3,6 +3,7 @@ import SwiftUI
 struct ForumHubView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @AppStorage("favoriteForumNames") private var favoriteForumNames = "[]"
     let account: Account?
     var refreshToken: Int = 0
 
@@ -69,53 +70,6 @@ struct ForumHubView: View {
                 }
             }
 
-            if visibleRecentForums.isEmpty == false {
-                Section {
-                    ForumTileGrid(
-                        tiles: visibleRecentForums.map { recent in
-                            ForumTile(
-                                id: recent.id,
-                                title: recent.displayName,
-                                avatarURL: recent.avatarURL,
-                                forum: recent.forum
-                            )
-                        },
-                        isManaging: isManagingRecentForums,
-                        onOpen: openForum,
-                        onDelete: { id in removeRecentForums(ids: [id]) }
-                    )
-                } header: {
-                    HStack {
-                        Text("最近浏览")
-                        Spacer(minLength: TiebaPureTheme.Spacing.sm)
-                        if isManagingRecentForums {
-                            Button("清空") {
-                                showsClearRecentConfirmation = true
-                            }
-                            .font(.footnote)
-                            .textCase(nil)
-                            .accessibilityLabel("清空最近浏览的贴吧")
-                            .accessibilityIdentifier("forum-hub-recent-clear")
-
-                            Button("完成") {
-                                isManagingRecentForums = false
-                            }
-                            .font(.footnote.weight(.semibold))
-                            .textCase(nil)
-                            .padding(.leading, TiebaPureTheme.Spacing.sm)
-                            .accessibilityIdentifier("forum-hub-recent-manage-done")
-                        } else {
-                            Button("管理") {
-                                isManagingRecentForums = true
-                            }
-                            .font(.footnote)
-                            .textCase(nil)
-                            .accessibilityLabel("管理最近浏览的贴吧")
-                            .accessibilityIdentifier("forum-hub-recent-manage")
-                        }
-                    }
-                }
-            }
 
             Section {
                 if let account {
@@ -341,7 +295,12 @@ struct ForumHubView: View {
     }
 
     private var visibleFollowedForums: [Forum] {
-        followedForums.filter(TiebaContentFilter.shouldKeep(forum:))
+        let favorites = Set((try? JSONDecoder().decode([String].self, from: Data(favoriteForumNames.utf8))) ?? [])
+        return followedForums.filter(TiebaContentFilter.shouldKeep(forum:)).enumerated().sorted {
+            let left = favorites.contains($0.element.name)
+            let right = favorites.contains($1.element.name)
+            return left == right ? $0.offset < $1.offset : left
+        }.map(\.element)
     }
 
     private func bridgeDetailForSizeClassChange(to sizeClass: UserInterfaceSizeClass?) {
@@ -667,6 +626,9 @@ private struct ForumTileGrid: View {
 
 private struct ForumTileButton: View {
     @AppStorage("homeVerticalForumList") private var verticalList = false
+    @AppStorage("favoriteForumNames") private var favoriteForumNames = "[]"
+    private var favorites: [String] { (try? JSONDecoder().decode([String].self, from: Data(favoriteForumNames.utf8))) ?? [] }
+    private var isFavorite: Bool { favorites.contains(tile.forum.name) }
     let tile: ForumTile
     let isManaging: Bool
     let onOpen: () -> Void
@@ -682,7 +644,7 @@ private struct ForumTileButton: View {
             (verticalList ? AnyLayout(HStackLayout(spacing: 14)) : AnyLayout(VStackLayout(spacing: TiebaPureTheme.Spacing.xs))) {
                 AvatarView(url: tile.avatarURL, title: tile.title, size: 52)
 
-                Text(tile.title)
+                Text(tile.title + (isFavorite ? " ★" : ""))
                     .font(.caption)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
@@ -693,6 +655,18 @@ private struct ForumTileButton: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            Button {
+                var names = favorites
+                if isFavorite { names.removeAll { $0 == tile.forum.name } }
+                else { names.append(tile.forum.name) }
+                if let data = try? JSONEncoder().encode(names), let value = String(data: data, encoding: .utf8) {
+                    favoriteForumNames = value
+                }
+            } label: {
+                Label(isFavorite ? "取消收藏" : "收藏置顶", systemImage: isFavorite ? "star.slash" : "star")
+            }
+        }
         .accessibilityLabel(isManaging ? tile.title : "进入\(tile.title)")
         .accessibilityIdentifier("forum-hub-forum-row")
         .overlay(alignment: .topTrailing) {
