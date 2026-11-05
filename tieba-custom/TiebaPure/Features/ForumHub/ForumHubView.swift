@@ -603,25 +603,28 @@ private struct ForumTileGrid: View {
         GridItem(.adaptive(minimum: 76, maximum: 120), spacing: TiebaPureTheme.Spacing.sm)
     ]
 
+    @ViewBuilder
     var body: some View {
-        LazyVGrid(columns: verticalList ? [GridItem(.flexible())] : columns, spacing: TiebaPureTheme.Spacing.md) {
+        if verticalList {
+            // Each forum is its own native Form row and interaction surface.
             ForEach(tiles) { tile in
-                ForumTileButton(
-                    tile: tile,
-                    isManaging: isManaging,
-                    onOpen: { onOpen(tile.forum) },
-                    onDelete: onDelete.map { delete in { delete(tile.id) } }
-                )
+                tileButton(tile)
+                    .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
             }
+        } else {
+            LazyVGrid(columns: columns, spacing: TiebaPureTheme.Spacing.md) {
+                ForEach(tiles) { tile in tileButton(tile) }
+            }
+            .padding(.vertical, TiebaPureTheme.Spacing.xs)
         }
-        .padding(.vertical, TiebaPureTheme.Spacing.xs)
-        .listRowInsets(EdgeInsets(
-            top: TiebaPureTheme.Spacing.xs,
-            leading: TiebaPureTheme.Spacing.md,
-            bottom: TiebaPureTheme.Spacing.xs,
-            trailing: TiebaPureTheme.Spacing.md
-        ))
     }
+
+    private func tileButton(_ tile: ForumTile) -> some View {
+        ForumTileButton(tile: tile, isManaging: isManaging,
+                        onOpen: { onOpen(tile.forum) },
+                        onDelete: onDelete.map { delete in { delete(tile.id) } })
+    }
+
 }
 
 private struct ForumTileButton: View {
@@ -664,8 +667,16 @@ private struct ForumTileButton: View {
                     favoriteForumNames = value
                 }
             } label: {
-                Label(isFavorite ? "取消收藏" : "收藏置顶", systemImage: isFavorite ? "star.slash" : "star")
+                Label((isFavorite ? "取消置顶：" : "收藏置顶：") + tile.title, systemImage: isFavorite ? "star.slash" : "star")
             }
+        } preview: {
+            HStack(spacing: 12) {
+                AvatarView(url: tile.avatarURL, title: tile.title, size: 52)
+                Text(tile.title + (isFavorite ? " ★" : ""))
+                    .foregroundStyle(.primary)
+            }
+            .padding(20)
+            .background(TiebaPureTheme.ColorToken.readerGroupedBackground)
         }
         .accessibilityLabel(isManaging ? tile.title : "进入\(tile.title)")
         .accessibilityIdentifier("forum-hub-forum-row")
