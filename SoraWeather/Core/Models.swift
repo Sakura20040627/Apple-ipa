@@ -12,7 +12,10 @@ public enum JapanTime {
         let year = calendar.component(.year, from: reference)
         return (-1...1).compactMap { calendar.date(from: DateComponents(year: year + $0, month: month, day: day)) }.min { abs($0.timeIntervalSince(reference)) < abs($1.timeIntervalSince(reference)) }
     }
-    public static func key(_ date: Date) -> String { let f = DateFormatter(); f.timeZone = calendar.timeZone; f.dateFormat = "yyyy-MM-dd"; return f.string(from: date) }
+    public static func key(_ date: Date) -> String {
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
 }
 public struct Region: Codable, Equatable, Identifiable, Sendable {
     public let id: String

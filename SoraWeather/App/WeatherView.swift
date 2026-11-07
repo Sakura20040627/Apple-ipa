@@ -2,8 +2,9 @@ import SwiftUI
 import MapKit
 import SafariServices
 
-struct WeatherView: View {
+struct WeatherPageContent: View {
     @ObservedObject var model: WeatherModel
+    var selectCity: ((Region) -> Void)? = nil
     @State private var cities = false
     @State private var collapsed = false
     @State private var forecastMode = 0
@@ -30,14 +31,14 @@ struct WeatherView: View {
                 WeatherSky(night: night, rainy: summary.contains("雨"))
                 ScrollView {
                     VStack(spacing: 10) {
-                        hero.padding(.top, 42).padding(.bottom, 48).contentShape(Rectangle()).gesture(citySwipe)
+                        hero.padding(.top, 42).padding(.bottom, 48)
                         if model.weather == nil && !model.loading { status(t("暂时无法取得天气，下拉重试", "下に引いて再試行してください"), symbol: "wifi.slash") }
                         if model.cached || model.weather?.stale(at: Date()) == true { status(t("缓存预报 · 请核对发布时间", "キャッシュ予報 · 発表時刻をご確認ください"), symbol: "clock.arrow.circlepath") }
                         if !model.notice.isEmpty { Text(model.notice).font(.caption2).foregroundStyle(.white.opacity(0.7)).multilineTextAlignment(.center).padding(.bottom, 4) }
                         forecastCard
-                        daysCard.contentShape(Rectangle()).gesture(citySwipe)
+                        daysCard
                         if !model.rain.isEmpty { rainCard }
-                        metricGrid.contentShape(Rectangle()).gesture(citySwipe)
+                        metricGrid
                         DisclosureGroup(isExpanded: $showSafety) {
                             safetyCard.padding(.top, 8)
                         } label: {
@@ -188,7 +189,7 @@ struct WeatherView: View {
             Spacer()
             HStack(spacing: 8) {
                 ForEach(Region.supported) { region in
-                    Button { Task { await model.select(region) } } label: {
+                    Button { if let selectCity { selectCity(region) } else { Task { await model.select(region) } } } label: {
                         Circle().fill(.white.opacity(region.id == model.region.id ? 1 : 0.35)).frame(width: 6, height: 6).frame(width: 12, height: 36)
                     }.accessibilityLabel(region.name)
                 }
@@ -250,7 +251,7 @@ struct WeatherView: View {
     private func stamp(_ date: Date) -> String { format(date, "M/d HH:mm") }
     private func shortTime(_ date: Date) -> String { format(date, "d日 HH:mm") }
     private func dayName(_ date: Date) -> String { JapanTime.calendar.isDate(date, inSameDayAs: Date()) ? t("今天", "今日") : format(date, "EEEE") }
-    private func format(_ date: Date, _ pattern: String) -> String { let f = DateFormatter(); f.locale = Locale(identifier: language); f.timeZone = JapanTime.calendar.timeZone; f.dateFormat = pattern; return f.string(from: date) }
+    private func format(_ date: Date, _ pattern: String) -> String { return WeatherDateStrings.string(date, pattern: pattern, language: language) }
     private func condition(_ s: String) -> String {
         guard !s.isEmpty else { return t("等待天气数据", "データ取得待ち") }
         if language == "ja" { return s }
@@ -390,5 +391,45 @@ private struct InternalWeatherMap: View {
                 .navigationTitle(region.name).navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成 / 完了") { dismiss() } } }
         }
+    }
+}
+
+@MainActor private enum WeatherDateStrings {
+    static var formatters: [String: DateFormatter] = [:]
+    static func string(_ date: Date, pattern: String, language: String) -> String {
+        let key = language + pattern
+        if let f = formatters[key] { return f.string(from: date) }
+        let f = DateFormatter(); f.locale = Locale(identifier: language); f.timeZone = JapanTime.calendar.timeZone; f.dateFormat = pattern
+        formatters[key] = f; return f.string(from: date)
+    }
+}
+struct WeatherView: View {
+    @ObservedObject var model: WeatherModel
+    @State private var selected: String
+    init(model: WeatherModel) { self.model = model; _selected = State(initialValue: model.region.id) }
+    var body: some View {
+        TabView(selection: $selected) {
+            ForEach(Region.supported) { region in
+                CityWeatherPage(region: region, active: selected == region.id) { selected = $0.id }.tag(region.id)
+            }
+        }.tabViewStyle(.page(indexDisplayMode: .never))
+            .onChange(of: selected) { _, id in
+                UserDefaults.standard.set(id, forKey: "region")
+                if let region = Region.supported.first(where: { $0.id == id }) { Task { await model.select(region) } }
+            }
+            .onChange(of: model.region.id) { _, id in if selected != id { selected = id } }
+    }
+}
+private struct CityWeatherPage: View {
+    @StateObject private var model: WeatherModel
+    let active: Bool
+    let select: (Region) -> Void
+    init(region: Region, active: Bool, select: @escaping (Region) -> Void) {
+        _model = StateObject(wrappedValue: WeatherModel(initialRegion: region)); self.active = active; self.select = select
+    }
+    var body: some View {
+        WeatherPageContent(model: model, selectCity: select)
+            .task(id: active) { if active { await model.refresh() } }
+            .onChange(of: model.region.id) { _, _ in select(model.region) }
     }
 }

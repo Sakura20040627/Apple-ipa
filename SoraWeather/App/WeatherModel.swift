@@ -19,8 +19,8 @@ import Combine
     private var locating = false
     private var lastRefresh: Date?
     private var snapshots: [String: WeatherSnapshot] = [:]
-    override init() {
-        region = Region.supported.first { $0.id == UserDefaults.standard.string(forKey: "region") } ?? .osaka
+    init(initialRegion: Region? = nil) {
+        region = initialRegion ?? Region.supported.first { $0.id == UserDefaults.standard.string(forKey: "region") } ?? .osaka
         super.init(); location.delegate = self; location.desiredAccuracy = kCLLocationAccuracyKilometer
     }
     var japanese: Bool { UserDefaults.standard.string(forKey: "language") == "ja" }
@@ -54,7 +54,7 @@ import Combine
         guard token == generation else { return }
         rain = nextRain
         rainFetched = rain.isEmpty ? nil : Date()
-        let nextError = await RainNotifications.shared.reconcile(region: selected, snapshot: r.cached ? nil : r.weather, points: rain, fetched: rainFetched, enabled: UserDefaults.standard.bool(forKey: "rainEnabled"), japanese: japanese) ?? ""
+        let nextError = await RainNotifications.shared.reconcile(region: selected, snapshot: r.cached ? nil : r.weather, points: rain, fetched: rainFetched, enabled: UserDefaults.standard.bool(forKey: "rainEnabled") && (UserDefaults.standard.string(forKey: "region") ?? "osaka") == selected.id, japanese: japanese) ?? ""
         guard token == generation else { return }
         notificationError = nextError; loading = false; lastRefresh = Date()
     }
