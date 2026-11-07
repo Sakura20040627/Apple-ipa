@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage("autoLocation") private var autoLocation = true
     @AppStorage("yahooClientID") private var clientID = ""
     @State private var asking = false
+    @State private var webpage: InternalPage?
     @Environment(\.dismiss) private var dismiss
     private func t(_ zh: String, _ ja: String) -> String { language == "ja" ? ja : zh }
     var body: some View {
@@ -53,5 +54,10 @@ struct SettingsView: View {
             .onChange(of: language) { _, _ in Task { await model.updateReminders() } }
             .onChange(of: autoLocation) { _, enabled in if enabled { model.locate() } }
         }.presentationDetents([.large])
+        .sheet(item: $webpage) { InternalBrowser(url: $0.url) }
+        .environment(\.openURL, OpenURLAction { url in
+            if url.scheme == "http" || url.scheme == "https" { webpage = InternalPage(url: url); return .handled }
+            return .systemAction
+        })
     }
 }

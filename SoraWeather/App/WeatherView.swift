@@ -1,8 +1,13 @@
 import SwiftUI
+import MapKit
+import SafariServices
 
 struct WeatherView: View {
     @ObservedObject var model: WeatherModel
     @State private var cities = false
+    @State private var map = false
+    @State private var webpage: InternalPage?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showSafety = false
     @AppStorage("language") private var language = "zh-Hans"
     private func t(_ zh: String, _ ja: String) -> String { language == "ja" ? ja : zh }
@@ -44,12 +49,16 @@ struct WeatherView: View {
             .toolbar(.hidden, for: .navigationBar)
             .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
             .sheet(isPresented: $cities) { WeatherCities(model: model) }
+            .sheet(isPresented: $map) { InternalWeatherMap(region: model.region) }
+            .sheet(item: $webpage) { InternalBrowser(url: $0.url) }
+            .environment(\.openURL, OpenURLAction { url in webpage = InternalPage(url: url); return .handled })
+            .animation(reduceMotion ? nil : .smooth(duration: 0.5), value: model.region.id)
         }.preferredColorScheme(.dark)
     }
     private var hero: some View {
         VStack(spacing: 0) {
             Text(model.region.name).font(.system(size: 34, weight: .regular)).padding(.bottom, 0)
-            Text(degree(current?.temperature)).font(.system(size: 96, weight: .ultraLight)).tracking(-5).padding(.leading, 13).minimumScaleFactor(0.5).lineLimit(1).contentTransition(.numericText())
+            Text(degree(current?.temperature)).font(.system(size: 96, weight: .thin)).tracking(-3).padding(.leading, 10).minimumScaleFactor(0.5).lineLimit(1).contentTransition(.numericText())
             Text(condition(summary)).font(.system(size: 20, weight: .medium)).foregroundStyle(.white.opacity(0.83)).padding(.top, -5)
             Text(t("最高:", "最高:") + degree(today?.high) + "  " + t("最低:", "最低:") + degree(today?.low)).font(.system(size: 19, weight: .medium)).padding(.top, 4)
             Text(t("当前时段预报 · 非实测", "現在の時間帯の予報 · 実況値ではありません")).font(.system(size: 11)).foregroundStyle(.white.opacity(0.55)).padding(.top, 8)
@@ -137,17 +146,12 @@ struct WeatherView: View {
     }
     private var bottomBar: some View {
         HStack {
-            Link(destination: URL(string: "https://weather.yahoo.co.jp/weather/zoomradar/")!) { Image(systemName: "map").font(.system(size: 22)).frame(width: 48, height: 44) }.accessibilityLabel(t("降雨雷达", "雨雲レーダー"))
+            Button { map = true } label: { Image(systemName: "map").font(.title2).frame(width: 48, height: 44) }.accessibilityLabel(t("天气地图", "天気マップ"))
             Spacer()
-            HStack(spacing: 11) {
-                Button { model.locate() } label: { Image(systemName: "location.fill").font(.system(size: 10)) }.accessibilityLabel(t("重新定位", "現在地を取得"))
-                ForEach(Region.supported) { region in
-                    Button { Task { await model.select(region) } } label: { Circle().fill(.white.opacity(region.id == model.region.id ? 1 : 0.3)).frame(width: 6, height: 6).frame(width: 12, height: 30) }.accessibilityLabel(region.name)
-                }
-            }
+            Button { model.locate() } label: { Label(model.region.name, systemImage: "location.fill").font(.subheadline) }.accessibilityLabel(t("重新定位", "現在地を取得"))
             Spacer()
-            Button { cities = true } label: { Image(systemName: "list.bullet").font(.system(size: 24)).frame(width: 48, height: 44) }.accessibilityLabel(t("城市与设置", "都市と設定"))
-        }.padding(.horizontal, 13).padding(.vertical, 5).glassEffect(.regular, in: .capsule).padding(.horizontal, 16).padding(.top, 7).padding(.bottom, 5)
+            Button { cities = true } label: { Image(systemName: "list.bullet").font(.title2).frame(width: 48, height: 44) }.accessibilityLabel(t("城市与设置", "都市と設定"))
+        }.padding(.horizontal, 20).padding(.vertical, 4).background(.ultraThinMaterial)
     }
     private var footer: some View {
         VStack(spacing: 5) {
@@ -251,6 +255,8 @@ private struct SoraCard: ViewModifier {
 extension View { func soraCard() -> some View { modifier(SoraCard()) } }
 
 private struct WeatherSky: View {
+    @State private var drift = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let night: Bool
     let rainy: Bool
     var body: some View {
@@ -275,7 +281,10 @@ private struct WeatherSky: View {
                 }
             }
             if rainy { Color.gray.opacity(0.14) }
-        }.ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
+        }.offset(x: drift ? 5 : -5).scaleEffect(1.04).ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
+            .onAppear { if !reduceMotion { withAnimation(.easeInOut(duration: 14).repeatForever(autoreverses: true)) { drift = true } } }
+            .onChange(of: reduceMotion) { _, reduced in if reduced { drift = false } }
+
     }
 }
 
@@ -311,5 +320,26 @@ private struct WeatherCities: View {
                     ToolbarItem(placement: .topBarTrailing) { Button { settings = true } label: { Image(systemName: "ellipsis.circle") }.accessibilityLabel(language == "ja" ? "設定" : "设置") }
                 }.sheet(isPresented: $settings) { SettingsView(model: model) }
         }.preferredColorScheme(.dark)
+    }
+}
+
+struct InternalPage: Identifiable { let id = UUID(); let url: URL }
+struct InternalBrowser: UIViewControllerRepresentable {
+    let url: URL
+    func makeUIViewController(context: Context) -> SFSafariViewController { SFSafariViewController(url: url) }
+    func updateUIViewController(_ controller: SFSafariViewController, context: Context) {}
+}
+private struct InternalWeatherMap: View {
+    let region: Region
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        NavigationStack {
+            Map(initialPosition: .region(MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: region.latitude, longitude: region.longitude), span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)))) {
+                Marker(region.name, coordinate: CLLocationCoordinate2D(latitude: region.latitude, longitude: region.longitude))
+            }.mapStyle(.standard(elevation: .realistic))
+                .safeAreaInset(edge: .bottom) { Text("预报区域地图 · 暂无雷达图层 / 予報エリア・雨雲レイヤー未提供").font(.caption).padding().frame(maxWidth: .infinity).background(.regularMaterial) }
+                .navigationTitle(region.name).navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成 / 完了") { dismiss() } } }
+        }
     }
 }
