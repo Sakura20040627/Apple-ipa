@@ -1,0 +1,76 @@
+name: Sora Weather iOS
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      signed:
+        description: Build a signed IPA (requires Apple signing secrets)
+        type: boolean
+        default: false
+      method:
+        description: Signing/export method
+        type: choice
+        options: [release-testing, debugging, app-store-connect]
+        default: release-testing
+permissions:
+  contents: read
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify-and-unsigned:
+    runs-on: macos-26
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select installed Xcode 26
+        run: bash scripts/select_xcode.sh
+      - name: Validate project structure
+        run: python3 scripts/validate_project.py
+      - name: Execute parser and rain policy tests
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          swift test --enable-code-coverage 2>&1 | tee build/swift-tests.log
+      - name: Build and launch on iOS 26 simulator
+        run: bash scripts/simulator_smoke.sh
+      - name: Archive unsigned device app and package IPA
+        run: |
+          set -euo pipefail
+          xcodebuild -project SoraWeather.xcodeproj -scheme SoraWeather -configuration Release -destination 'generic/platform=iOS' -archivePath build/SoraWeather-unsigned.xcarchive archive CODE_SIGNING_ALLOWED=NO 2>&1 | tee build/archive.log
+          python3 scripts/package_unsigned.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SoraWeather-unsigned-IPA
+          path: build/SoraWeather-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification-logs
+          path: |
+            build/*.log
+            build/simulator.png
+  signed-ipa:
+    if: github.event_name == 'workflow_dispatch' && inputs.signed
+    needs: verify-and-unsigned
+    runs-on: macos-26
+    timeout-minutes: 25
+    environment: ios-signing
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/select_xcode.sh
+      - name: Sign, archive and export
+        env:
+          P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'app.sora.weather' }}
+          EXPORT_METHOD: ${{ inputs.method }}
+        run: python3 scripts/signed_ipa.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SoraWeather-signed-IPA
+          path: build/export/*.ipa

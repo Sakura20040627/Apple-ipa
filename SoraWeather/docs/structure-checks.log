@@ -1,0 +1,3 @@
+PASS: 44 Xcode objects, source/resource references, plist, scheme, scripts and fixture JSON.
+PASS: OpenStep pbxproj parse; all 44 objects resolved.
+PASS: Swift 6.0.3 frontend syntax parse of all App/Core files. Apple SDK typecheck not performed.

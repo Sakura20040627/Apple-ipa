@@ -1,0 +1,47 @@
+// !$*UTF8*$!
+{ archiveVersion = 1; classes = {}; objectVersion = 56; objects = {
+C64FFD236BE0736F140C07F2 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Notifications.swift"; sourceTree = "<group>"; };
+54CBD78E9914C108216F0420 = { isa = PBXBuildFile; fileRef = C64FFD236BE0736F140C07F2; };
+F7457BB7868A503621D15D5D = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/SettingsView.swift"; sourceTree = "<group>"; };
+EC7FFEB9E0BB9FDB05999B5E = { isa = PBXBuildFile; fileRef = F7457BB7868A503621D15D5D; };
+A54C264FE523EF84A1CFC898 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/SoraWeatherApp.swift"; sourceTree = "<group>"; };
+56F6E0FA5ED270BD427BE0F7 = { isa = PBXBuildFile; fileRef = A54C264FE523EF84A1CFC898; };
+6E7A3FEC1BB5BAD362A6ED52 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/WeatherModel.swift"; sourceTree = "<group>"; };
+0CDDE109AB584892E3305248 = { isa = PBXBuildFile; fileRef = 6E7A3FEC1BB5BAD362A6ED52; };
+380967C1FAE2EED93F74B462 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/WeatherService.swift"; sourceTree = "<group>"; };
+868A53F74DD6B1B9B0DF57E8 = { isa = PBXBuildFile; fileRef = 380967C1FAE2EED93F74B462; };
+6C3A6AE43FD5C6530C4EFB70 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/WeatherView.swift"; sourceTree = "<group>"; };
+FF710F98105C92ACFAC13138 = { isa = PBXBuildFile; fileRef = 6C3A6AE43FD5C6530C4EFB70; };
+6E3FBAA6C4BECA29F6D28C2A = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/ForecastRainPolicy.swift"; sourceTree = "<group>"; };
+07255ECCF469279A9505C447 = { isa = PBXBuildFile; fileRef = 6E3FBAA6C4BECA29F6D28C2A; };
+678C90ECA022811A0B32B50C = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/JMAParser.swift"; sourceTree = "<group>"; };
+7AB1934712484CC58A26190C = { isa = PBXBuildFile; fileRef = 678C90ECA022811A0B32B50C; };
+D873FF4B1FA186700221F47A = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/Models.swift"; sourceTree = "<group>"; };
+93791ED83B9056334DE4691F = { isa = PBXBuildFile; fileRef = D873FF4B1FA186700221F47A; };
+AD3A41E430AD7860B0901E48 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/RainPolicy.swift"; sourceTree = "<group>"; };
+7F812F2222914EA3EB488FCE = { isa = PBXBuildFile; fileRef = AD3A41E430AD7860B0901E48; };
+727C0702E70B1E75B65AD1C6 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/YahooParser.swift"; sourceTree = "<group>"; };
+203D0A5156BF0A31DDBBD8C4 = { isa = PBXBuildFile; fileRef = 727C0702E70B1E75B65AD1C6; };
+D0922E7E8B427B78AEFC2173 = { isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Resources/Assets.xcassets"; sourceTree = "<group>"; };
+08920770699BCD29D8587B5E = { isa = PBXBuildFile; fileRef = D0922E7E8B427B78AEFC2173; };
+13FF814DAACB3823ABBD3EFD = { isa = PBXFileReference; lastKnownFileType = text.xml; path = "Resources/PrivacyInfo.xcprivacy"; sourceTree = "<group>"; };
+B0AA58B57575E51BCA3F672D = { isa = PBXBuildFile; fileRef = 13FF814DAACB3823ABBD3EFD; };
+54652533AFB51A57AE0EE309 = { isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "ja"; path = "Resources/ja.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+D0FADEF0EE3FE7A35A20A8E9 = { isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "Resources/zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+A8956B83D9FCAD59AC616D07 = { isa = PBXVariantGroup; children = (54652533AFB51A57AE0EE309,D0FADEF0EE3FE7A35A20A8E9,); name = InfoPlist.strings; sourceTree = "<group>"; };
+2036E4BC796606C6B7B8CB6F = { isa = PBXBuildFile; fileRef = A8956B83D9FCAD59AC616D07; };
+38A007151ABE87CC01A5B6E9 = { isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SoraWeather.app; sourceTree = BUILT_PRODUCTS_DIR; };
+FBDC4F23F93125BBEEAE800C = { isa = PBXGroup; children = (38A007151ABE87CC01A5B6E9,); name = Products; sourceTree = "<group>"; };
+B28B7AF69320201D1CF206EB = { isa = PBXGroup; children = (C64FFD236BE0736F140C07F2,F7457BB7868A503621D15D5D,A54C264FE523EF84A1CFC898,6E7A3FEC1BB5BAD362A6ED52,380967C1FAE2EED93F74B462,6C3A6AE43FD5C6530C4EFB70,6E3FBAA6C4BECA29F6D28C2A,678C90ECA022811A0B32B50C,D873FF4B1FA186700221F47A,AD3A41E430AD7860B0901E48,727C0702E70B1E75B65AD1C6,D0922E7E8B427B78AEFC2173,13FF814DAACB3823ABBD3EFD,A8956B83D9FCAD59AC616D07,FBDC4F23F93125BBEEAE800C,); sourceTree = "<group>"; };
+BCE16DD0260827ECF338C787 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (54CBD78E9914C108216F0420,EC7FFEB9E0BB9FDB05999B5E,56F6E0FA5ED270BD427BE0F7,0CDDE109AB584892E3305248,868A53F74DD6B1B9B0DF57E8,FF710F98105C92ACFAC13138,07255ECCF469279A9505C447,7AB1934712484CC58A26190C,93791ED83B9056334DE4691F,7F812F2222914EA3EB488FCE,203D0A5156BF0A31DDBBD8C4,); runOnlyForDeploymentPostprocessing = 0; };
+0189424A5A60FED329FA868E = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (08920770699BCD29D8587B5E,B0AA58B57575E51BCA3F672D,2036E4BC796606C6B7B8CB6F,); runOnlyForDeploymentPostprocessing = 0; };
+7561BFB015D8F536760CB671 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+0E8A3AD980EC179856012B7E = { isa = PBXNativeTarget; buildConfigurationList = C57128001CE614BF8549D6BB; buildPhases = (BCE16DD0260827ECF338C787,7561BFB015D8F536760CB671,0189424A5A60FED329FA868E,); buildRules = (); dependencies = (); name = SoraWeather; productName = SoraWeather; productReference = 38A007151ABE87CC01A5B6E9; productType = "com.apple.product-type.application"; };
+89E1FD6268CC0F221A2BE178 = { isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 26.0; SWIFT_VERSION = 5.0; SWIFT_STRICT_CONCURRENCY = targeted; }; name = Debug; };
+7082CC0B6FC1282FCEABD07A = { isa = XCBuildConfiguration; buildSettings = { ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Resources/Info.plist; MARKETING_VERSION = 1.0.0; PRODUCT_BUNDLE_IDENTIFIER = app.sora.weather; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; TARGETED_DEVICE_FAMILY = "1,2"; ENABLE_PREVIEWS = YES; }; name = Debug; };
+E6DE6C99132752C914FEF632 = { isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 26.0; SWIFT_VERSION = 5.0; SWIFT_STRICT_CONCURRENCY = targeted; }; name = Release; };
+639A7CA24D39909E713B47F7 = { isa = XCBuildConfiguration; buildSettings = { ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Resources/Info.plist; MARKETING_VERSION = 1.0.0; PRODUCT_BUNDLE_IDENTIFIER = app.sora.weather; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_OPTIMIZATION_LEVEL = "-O"; TARGETED_DEVICE_FAMILY = "1,2"; ENABLE_PREVIEWS = YES; }; name = Release; };
+862894B703A6DEDF96A9DD6C = { isa = XCConfigurationList; buildConfigurations = (89E1FD6268CC0F221A2BE178,E6DE6C99132752C914FEF632,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+C57128001CE614BF8549D6BB = { isa = XCConfigurationList; buildConfigurations = (7082CC0B6FC1282FCEABD07A,639A7CA24D39909E713B47F7,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+98F54143AB4E86B28C3AFEE0 = { isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 2600; TargetAttributes = { 0E8A3AD980EC179856012B7E = { CreatedOnToolsVersion = 26.0; }; }; }; buildConfigurationList = 862894B703A6DEDF96A9DD6C; compatibilityVersion = "Xcode 14.0"; developmentRegion = ja; hasScannedForEncodings = 0; knownRegions = (ja,"zh-Hans",Base,); mainGroup = B28B7AF69320201D1CF206EB; productRefGroup = FBDC4F23F93125BBEEAE800C; projectDirPath = ""; projectRoot = ""; targets = (0E8A3AD980EC179856012B7E,); };
+}; rootObject = 98F54143AB4E86B28C3AFEE0; }

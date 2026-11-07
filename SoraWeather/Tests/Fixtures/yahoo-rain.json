@@ -1,0 +1,1 @@
+{"Feature": [{"Property": {"WeatherList": {"Weather": [{"Type": "observation", "Date": "202611080200", "Rainfall": 0}, {"Type": "forecast", "Date": "202611080210", "Rainfall": 0}, {"Type": "forecast", "Date": "202611080220", "Rainfall": 0.8}]}}}]}

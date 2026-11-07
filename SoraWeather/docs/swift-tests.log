@@ -1,0 +1,94 @@
+Test Suite 'All tests' started at 2026-11-08 02:24:42.196
+Test Suite 'debug.xctest' started at 2026-11-08 02:24:42.197
+Test Suite 'ParserTests' started at 2026-11-08 02:24:42.197
+Test Case 'ParserTests.testCancelledWarningsNotActive' started at 2026-11-08 02:24:42.197
+Test Case 'ParserTests.testCancelledWarningsNotActive' passed (0.003 seconds)
+Test Case 'ParserTests.testJMAEmptyStringsRemainMissing' started at 2026-11-08 02:24:42.199
+Test Case 'ParserTests.testJMAEmptyStringsRemainMissing' passed (0.108 seconds)
+Test Case 'ParserTests.testJMARealDataDateAndAreaAlignment' started at 2026-11-08 02:24:42.308
+Test Case 'ParserTests.testJMARealDataDateAndAreaAlignment' passed (0.008 seconds)
+Test Case 'ParserTests.testJMARejectsMalformedJSON' started at 2026-11-08 02:24:42.316
+Test Case 'ParserTests.testJMARejectsMalformedJSON' passed (0.0 seconds)
+Test Case 'ParserTests.testJMARejectsWrongRegion' started at 2026-11-08 02:24:42.316
+Test Case 'ParserTests.testJMARejectsWrongRegion' passed (0.0 seconds)
+Test Case 'ParserTests.testJMATodayTemperatureForecastNotObservation' started at 2026-11-08 02:24:42.317
+Test Case 'ParserTests.testJMATodayTemperatureForecastNotObservation' passed (0.006 seconds)
+Test Case 'ParserTests.testJapanMidnightAndYearRollover' started at 2026-11-08 02:24:42.323
+Test Case 'ParserTests.testJapanMidnightAndYearRollover' passed (0.001 seconds)
+Test Case 'ParserTests.testLatestQuakeCancellationSuppressesOldRevision' started at 2026-11-08 02:24:42.324
+Test Case 'ParserTests.testLatestQuakeCancellationSuppressesOldRevision' passed (0.101 seconds)
+Test Case 'ParserTests.testNearestRegionOutsideCoverageNotOsaka' started at 2026-11-08 02:24:42.425
+Test Case 'ParserTests.testNearestRegionOutsideCoverageNotOsaka' passed (0.0 seconds)
+Test Case 'ParserTests.testPinpointActualThreeHourSlots' started at 2026-11-08 02:24:42.425
+Test Case 'ParserTests.testPinpointActualThreeHourSlots' passed (0.007 seconds)
+Test Case 'ParserTests.testPinpointRejectsShiftedRowLabels' started at 2026-11-08 02:24:42.432
+Test Case 'ParserTests.testPinpointRejectsShiftedRowLabels' passed (0.004 seconds)
+Test Case 'ParserTests.testQuakeFixtureDecodesActualSchema' started at 2026-11-08 02:24:42.436
+Test Case 'ParserTests.testQuakeFixtureDecodesActualSchema' passed (0.002 seconds)
+Test Case 'ParserTests.testQuakeRevisionsDeduplicated' started at 2026-11-08 02:24:42.437
+Test Case 'ParserTests.testQuakeRevisionsDeduplicated' passed (0.0 seconds)
+Test Case 'ParserTests.testRoundTripCachePreservesMissingValues' started at 2026-11-08 02:24:42.438
+Test Case 'ParserTests.testRoundTripCachePreservesMissingValues' passed (0.008 seconds)
+Test Case 'ParserTests.testSlotIDsDoNotCollideAcrossIntervals' started at 2026-11-08 02:24:42.445
+Test Case 'ParserTests.testSlotIDsDoNotCollideAcrossIntervals' passed (0.0 seconds)
+Test Case 'ParserTests.testSnapshotStalenessUsesIssueTime' started at 2026-11-08 02:24:42.446
+Test Case 'ParserTests.testSnapshotStalenessUsesIssueTime' passed (0.003 seconds)
+Test Case 'ParserTests.testTenDaysMissingNotFabricated' started at 2026-11-08 02:24:42.449
+Test Case 'ParserTests.testTenDaysMissingNotFabricated' passed (0.011 seconds)
+Test Case 'ParserTests.testWarningSummaryScopeAndCancellation' started at 2026-11-08 02:24:42.460
+Test Case 'ParserTests.testWarningSummaryScopeAndCancellation' passed (0.0 seconds)
+Test Case 'ParserTests.testYahooIssueIsNotFetchTime' started at 2026-11-08 02:24:42.461
+Test Case 'ParserTests.testYahooIssueIsNotFetchTime' passed (0.003 seconds)
+Test Case 'ParserTests.testYahooLiveExtractEightDays' started at 2026-11-08 02:24:42.464
+Test Case 'ParserTests.testYahooLiveExtractEightDays' passed (0.003 seconds)
+Test Case 'ParserTests.testYahooRejectsLoginOrLayoutChange' started at 2026-11-08 02:24:42.466
+Test Case 'ParserTests.testYahooRejectsLoginOrLayoutChange' passed (0.0 seconds)
+Test Case 'ParserTests.testYahooRejectsMissingTemperatureStructure' started at 2026-11-08 02:24:42.467
+Test Case 'ParserTests.testYahooRejectsMissingTemperatureStructure' passed (0.001 seconds)
+Test Suite 'ParserTests' passed at 2026-11-08 02:24:42.468
+	 Executed 22 tests, with 0 failures (0 unexpected) in 0.271 (0.271) seconds
+Test Suite 'RainPolicyTests' started at 2026-11-08 02:24:42.468
+Test Case 'RainPolicyTests.testAlreadyRainingProducesNoOnset' started at 2026-11-08 02:24:42.468
+Test Case 'RainPolicyTests.testAlreadyRainingProducesNoOnset' passed (0.0 seconds)
+Test Case 'RainPolicyTests.testBelowThresholdProducesNoPlan' started at 2026-11-08 02:24:42.468
+Test Case 'RainPolicyTests.testBelowThresholdProducesNoPlan' passed (0.0 seconds)
+Test Case 'RainPolicyTests.testBeyondOneHourIgnored' started at 2026-11-08 02:24:42.468
+Test Case 'RainPolicyTests.testBeyondOneHourIgnored' passed (0.0 seconds)
+Test Case 'RainPolicyTests.testCooldownSuppressesRepeatedNotifications' started at 2026-11-08 02:24:42.468
+Test Case 'RainPolicyTests.testCooldownSuppressesRepeatedNotifications' passed (0.0 seconds)
+Test Case 'RainPolicyTests.testDryRefreshProducesNoPlan' started at 2026-11-08 02:24:42.469
+Test Case 'RainPolicyTests.testDryRefreshProducesNoPlan' passed (0.0 seconds)
+Test Case 'RainPolicyTests.testForecastWindowMissingProbabilityNotZeroRain' started at 2026-11-08 02:24:42.469
+Test Case 'RainPolicyTests.testForecastWindowMissingProbabilityNotZeroRain' passed (0.0 seconds)
+Test Case 'RainPolicyTests.testForecastWindowProbabilityThreshold' started at 2026-11-08 02:24:42.469
+Test Case 'RainPolicyTests.testForecastWindowProbabilityThreshold' passed (0.0 seconds)
+Test Case 'RainPolicyTests.testFutureFetchRejected' started at 2026-11-08 02:24:42.469
+Test Case 'RainPolicyTests.testFutureFetchRejected' passed (0.0 seconds)
+Test Case 'RainPolicyTests.testNearOnsetClampsToFiveSeconds' started at 2026-11-08 02:24:42.469
+Test Case 'RainPolicyTests.testNearOnsetClampsToFiveSeconds' passed (0.0 seconds)
+Test Case 'RainPolicyTests.testNoSourceProducesNoPlan' started at 2026-11-08 02:24:42.469
+Test Case 'RainPolicyTests.testNoSourceProducesNoPlan' passed (0.0 seconds)
+Test Case 'RainPolicyTests.testOldForecastWindowNotScheduled' started at 2026-11-08 02:24:42.469
+Test Case 'RainPolicyTests.testOldForecastWindowNotScheduled' passed (0.0 seconds)
+Test Case 'RainPolicyTests.testOptOutProducesNoPlan' started at 2026-11-08 02:24:42.469
+Test Case 'RainPolicyTests.testOptOutProducesNoPlan' passed (0.0 seconds)
+Test Case 'RainPolicyTests.testPastForecastIgnored' started at 2026-11-08 02:24:42.469
+Test Case 'RainPolicyTests.testPastForecastIgnored' passed (0.0 seconds)
+Test Case 'RainPolicyTests.testPermissionDeniedProducesNoPlan' started at 2026-11-08 02:24:42.469
+Test Case 'RainPolicyTests.testPermissionDeniedProducesNoPlan' passed (0.0 seconds)
+Test Case 'RainPolicyTests.testPlanHasRegionScopedIdentifier' started at 2026-11-08 02:24:42.470
+Test Case 'RainPolicyTests.testPlanHasRegionScopedIdentifier' passed (0.001 seconds)
+Test Case 'RainPolicyTests.testRainSchemaAndUnits' started at 2026-11-08 02:24:42.470
+Test Case 'RainPolicyTests.testRainSchemaAndUnits' passed (0.002 seconds)
+Test Case 'RainPolicyTests.testSchedulesTenMinutesBeforeForecast' started at 2026-11-08 02:24:42.472
+Test Case 'RainPolicyTests.testSchedulesTenMinutesBeforeForecast' passed (0.0 seconds)
+Test Case 'RainPolicyTests.testStaleFetchProducesNoPlan' started at 2026-11-08 02:24:42.472
+Test Case 'RainPolicyTests.testStaleFetchProducesNoPlan' passed (0.0 seconds)
+Test Case 'RainPolicyTests.testUnsortedPointsUseEarliestWetTime' started at 2026-11-08 02:24:42.472
+Test Case 'RainPolicyTests.testUnsortedPointsUseEarliestWetTime' passed (0.0 seconds)
+Test Suite 'RainPolicyTests' passed at 2026-11-08 02:24:42.472
+	 Executed 19 tests, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'debug.xctest' passed at 2026-11-08 02:24:42.472
+	 Executed 41 tests, with 0 failures (0 unexpected) in 0.275 (0.275) seconds
+Test Suite 'All tests' passed at 2026-11-08 02:24:42.472
+	 Executed 41 tests, with 0 failures (0 unexpected) in 0.275 (0.275) seconds
