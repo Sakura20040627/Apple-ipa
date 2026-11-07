@@ -5,7 +5,7 @@ import SafariServices
 struct WeatherView: View {
     @ObservedObject var model: WeatherModel
     @State private var cities = false
-    @State private var scrollY: CGFloat = 0
+    @State private var collapsed = false
     @State private var forecastMode = 0
     @State private var map = false
     @State private var webpage: InternalPage?
@@ -30,14 +30,14 @@ struct WeatherView: View {
                 WeatherSky(night: night, rainy: summary.contains("雨"))
                 ScrollView {
                     VStack(spacing: 10) {
-                        hero.padding(.top, 42).padding(.bottom, 48)
+                        hero.padding(.top, 42).padding(.bottom, 48).contentShape(Rectangle()).gesture(citySwipe)
                         if model.weather == nil && !model.loading { status(t("暂时无法取得天气，下拉重试", "下に引いて再試行してください"), symbol: "wifi.slash") }
                         if model.cached || model.weather?.stale(at: Date()) == true { status(t("缓存预报 · 请核对发布时间", "キャッシュ予報 · 発表時刻をご確認ください"), symbol: "clock.arrow.circlepath") }
                         if !model.notice.isEmpty { Text(model.notice).font(.caption2).foregroundStyle(.white.opacity(0.7)).multilineTextAlignment(.center).padding(.bottom, 4) }
                         forecastCard
-                        daysCard
+                        daysCard.contentShape(Rectangle()).gesture(citySwipe)
                         if !model.rain.isEmpty { rainCard }
-                        metricGrid
+                        metricGrid.contentShape(Rectangle()).gesture(citySwipe)
                         DisclosureGroup(isExpanded: $showSafety) {
                             safetyCard.padding(.top, 8)
                         } label: {
@@ -46,9 +46,9 @@ struct WeatherView: View {
                         footer.padding(.vertical, 13)
                     }.padding(.horizontal, 20).frame(maxWidth: 620).frame(maxWidth: .infinity)
                 }.scrollIndicators(.hidden).refreshable { await model.refresh() }
-                .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, value in scrollY = value }
-                .safeAreaInset(edge: .top, spacing: 0) {
-                    if scrollY > 220 {
+                .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 220 } action: { _, value in collapsed = value }
+                .overlay(alignment: .top) {
+                    if collapsed {
                         VStack(spacing: 3) { Text(model.region.name).font(.system(size: 28, weight: .semibold)); Text(degree(current?.temperature) + " | " + condition(summary)).font(.system(size: 18, weight: .semibold)) }.frame(maxWidth: .infinity).padding(.vertical, 8).background(.ultraThinMaterial).transition(.opacity)
                     }
                 }
@@ -60,8 +60,19 @@ struct WeatherView: View {
             .sheet(isPresented: $map) { InternalWeatherMap(region: model.region) }
             .sheet(item: $webpage) { InternalBrowser(url: $0.url) }
             .environment(\.openURL, OpenURLAction { url in webpage = InternalPage(url: url); return .handled })
-            .animation(reduceMotion ? nil : .smooth(duration: 0.5), value: model.region.id)
+
         }.preferredColorScheme(.dark)
+    }
+    private var citySwipe: some Gesture {
+        DragGesture(minimumDistance: 25).onEnded { value in
+            guard abs(value.translation.width) > 65, abs(value.translation.width) > abs(value.translation.height)*1.6 else { return }
+            let regions = Region.supported
+            guard let index = regions.firstIndex(where: { $0.id == model.region.id }) else { return }
+            let next = index + (value.translation.width < 0 ? 1 : -1)
+            guard regions.indices.contains(next) else { return }
+            collapsed = false
+            Task { await model.select(regions[next]) }
+        }
     }
     private var hero: some View {
         VStack(spacing: 5) {
@@ -175,11 +186,13 @@ struct WeatherView: View {
         HStack {
             Button { map = true } label: { Image(systemName: "map").font(.system(size: 24, weight: .medium)).frame(width: 48, height: 48) }.glassEffect(.regular, in: .circle).accessibilityLabel(t("天气地图", "天気マップ"))
             Spacer()
-            HStack(spacing: 10) {
-                Button { model.locate() } label: { Image(systemName: "location.fill").font(.system(size: 12)) }.accessibilityLabel(t("定位", "現在地"))
-                Button { cities = true } label: { Circle().fill(.white.opacity(0.45)).frame(width: 7, height: 7) }.accessibilityLabel(t("城市列表", "都市一覧"))
-                Button { cities = true } label: { Circle().fill(.white.opacity(0.45)).frame(width: 7, height: 7) }.accessibilityLabel(t("城市列表", "都市一覧"))
-            }.padding(.horizontal, 20).frame(height: 48).glassEffect(.regular, in: .capsule)
+            HStack(spacing: 8) {
+                ForEach(Region.supported) { region in
+                    Button { Task { await model.select(region) } } label: {
+                        Circle().fill(.white.opacity(region.id == model.region.id ? 1 : 0.35)).frame(width: 6, height: 6).frame(width: 12, height: 36)
+                    }.accessibilityLabel(region.name)
+                }
+            }.padding(.horizontal, 12).glassEffect(.regular, in: .capsule)
             Spacer()
             Button { cities = true } label: { Image(systemName: "list.bullet").font(.system(size: 24, weight: .medium)).frame(width: 48, height: 48) }.glassEffect(.regular, in: .circle).accessibilityLabel(t("城市与设置", "都市と設定"))
         }.padding(.horizontal, 26).padding(.vertical, 9)
@@ -278,8 +291,8 @@ private struct SoraCard: ViewModifier {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     func body(content: Content) -> some View {
         content.padding(15)
-            .background(reduceTransparency ? Color(red: 0.15, green: 0.25, blue: 0.37) : Color.black.opacity(0.12), in: RoundedRectangle(cornerRadius: 20))
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+            .background(reduceTransparency ? Color(red: 0.15, green: 0.25, blue: 0.37) : Color(red: 0.29, green: 0.38, blue: 0.47).opacity(0.68), in: RoundedRectangle(cornerRadius: 20))
+
             .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.035), lineWidth: 0.5))
     }
 }
@@ -312,9 +325,7 @@ private struct WeatherSky: View {
                 }
             }
             if rainy { Color.gray.opacity(0.14) }
-        }.offset(x: drift ? 5 : -5).scaleEffect(1.04).ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
-            .onAppear { if !reduceMotion { withAnimation(.easeInOut(duration: 14).repeatForever(autoreverses: true)) { drift = true } } }
-            .onChange(of: reduceMotion) { _, reduced in if reduced { drift = false } }
+        }.drawingGroup().ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
 
     }
 }

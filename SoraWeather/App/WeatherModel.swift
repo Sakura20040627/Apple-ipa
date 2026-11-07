@@ -18,6 +18,7 @@ import Combine
     private var generation = UUID()
     private var locating = false
     private var lastRefresh: Date?
+    private var snapshots: [String: WeatherSnapshot] = [:]
     override init() {
         region = Region.supported.first { $0.id == UserDefaults.standard.string(forKey: "region") } ?? .osaka
         super.init(); location.delegate = self; location.desiredAccuracy = kCLLocationAccuracyKilometer
@@ -25,7 +26,9 @@ import Combine
     var japanese: Bool { UserDefaults.standard.string(forKey: "language") == "ja" }
     func text(_ zh: String, _ ja: String) -> String { japanese ? ja : zh }
     func select(_ next: Region) async {
-        generation = UUID(); loading = false; region = next; weather = nil; safety = .init(); rain = []; rainFetched = nil; lastRefresh = nil
+        guard next.id != region.id else { return }
+        if let weather { snapshots[region.id] = weather }
+        generation = UUID(); loading = false; region = next; weather = snapshots[next.id]; safety = .init(); rain = []; rainFetched = nil; lastRefresh = nil
         UserDefaults.standard.set(next.id, forKey: "region"); await RainNotifications.shared.cancel(); await refresh()
     }
     func refresh() async {
@@ -40,9 +43,12 @@ import Combine
         }
         async let result = WeatherService.shared.refresh(selected)
         async let info = WeatherService.shared.safety(region: selected)
-        let (r, s) = await (result, info)
+        let r = await result
         guard token == generation else { return }
-        weather = r.weather; cached = r.cached; fallback = r.yahooFailed; safety = s
+        weather = r.weather; cached = r.cached; fallback = r.yahooFailed
+        let s = await info
+        guard token == generation else { return }
+        safety = s
         let key = UserDefaults.standard.string(forKey: "yahooClientID") ?? ""
         let nextRain = (try? await WeatherService.shared.rain(region: selected, clientID: key)) ?? []
         guard token == generation else { return }
