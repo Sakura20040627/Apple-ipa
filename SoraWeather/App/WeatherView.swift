@@ -5,6 +5,8 @@ import SafariServices
 struct WeatherView: View {
     @ObservedObject var model: WeatherModel
     @State private var cities = false
+    @State private var scrollY: CGFloat = 0
+    @State private var forecastMode = 0
     @State private var map = false
     @State private var webpage: InternalPage?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -28,7 +30,7 @@ struct WeatherView: View {
                 WeatherSky(night: night, rainy: summary.contains("雨"))
                 ScrollView {
                     VStack(spacing: 10) {
-                        hero.padding(.top, 32).padding(.bottom, 25)
+                        hero.padding(.top, 42).padding(.bottom, 48)
                         if model.weather == nil && !model.loading { status(t("暂时无法取得天气，下拉重试", "下に引いて再試行してください"), symbol: "wifi.slash") }
                         if model.cached || model.weather?.stale(at: Date()) == true { status(t("缓存预报 · 请核对发布时间", "キャッシュ予報 · 発表時刻をご確認ください"), symbol: "clock.arrow.circlepath") }
                         if !model.notice.isEmpty { Text(model.notice).font(.caption2).foregroundStyle(.white.opacity(0.7)).multilineTextAlignment(.center).padding(.bottom, 4) }
@@ -40,10 +42,16 @@ struct WeatherView: View {
                             safetyCard.padding(.top, 8)
                         } label: {
                             HStack { Label(t("气象与地震信息", "気象・地震情報"), systemImage: "exclamationmark.shield.fill"); Spacer(); Text(t("非实时", "速報ではありません")).font(.caption2).foregroundStyle(.white.opacity(0.6)) }.font(.subheadline)
-                        }.tint(.white).padding(16).background(.black.opacity(night ? 0.16 : 0.08), in: RoundedRectangle(cornerRadius: 16))
+                        }.tint(.white).padding(16).background(.black.opacity(night ? 0.16 : 0.08), in: RoundedRectangle(cornerRadius: 20))
                         footer.padding(.vertical, 13)
                     }.padding(.horizontal, 20).frame(maxWidth: 620).frame(maxWidth: .infinity)
                 }.scrollIndicators(.hidden).refreshable { await model.refresh() }
+                .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, value in scrollY = value }
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    if scrollY > 220 {
+                        VStack(spacing: 3) { Text(model.region.name).font(.system(size: 28, weight: .semibold)); Text(degree(current?.temperature) + " | " + condition(summary)).font(.system(size: 18, weight: .semibold)) }.frame(maxWidth: .infinity).padding(.vertical, 8).background(.ultraThinMaterial).transition(.opacity)
+                    }
+                }
             }
             .foregroundStyle(.white)
             .toolbar(.hidden, for: .navigationBar)
@@ -56,25 +64,44 @@ struct WeatherView: View {
         }.preferredColorScheme(.dark)
     }
     private var hero: some View {
-        VStack(spacing: 0) {
-            Text(model.region.name).font(.system(size: 34, weight: .regular)).padding(.bottom, 0)
-            Text(degree(current?.temperature)).font(.system(size: 96, weight: .thin)).tracking(-3).padding(.leading, 10).minimumScaleFactor(0.5).lineLimit(1).contentTransition(.numericText())
-            Text(condition(summary)).font(.system(size: 20, weight: .medium)).foregroundStyle(.white.opacity(0.83)).padding(.top, -5)
-            Text(t("最高:", "最高:") + degree(today?.high) + "  " + t("最低:", "最低:") + degree(today?.low)).font(.system(size: 19, weight: .medium)).padding(.top, 4)
-            Text(t("当前时段预报 · 非实测", "現在の時間帯の予報 · 実況値ではありません")).font(.system(size: 11)).foregroundStyle(.white.opacity(0.55)).padding(.top, 8)
-            if model.loading && model.weather == nil { ProgressView().tint(.white).padding(.top, 8) }
-        }.frame(maxWidth: .infinity).shadow(color: .black.opacity(0.12), radius: 8, y: 2).accessibilityElement(children: .combine)
+        VStack(spacing: 5) {
+            Label(t("我的位置", "現在地"), systemImage: "location.fill").font(.system(size: 12, weight: .semibold))
+            Text(model.region.name).font(.system(size: 34, weight: .medium))
+            Text(degree(current?.temperature)).font(.system(size: 96, weight: .light)).tracking(-3).padding(.leading, 10).contentTransition(.numericText())
+            HStack(spacing: 16) {
+                highLow(t("最高", "最高"), value: today?.high)
+                highLow(t("最低", "最低"), value: today?.low)
+            }
+            Text(condition(summary)).font(.system(size: 21, weight: .semibold)).padding(.top, 3)
+            Text(t("时段预报 · 非实测", "時間帯の予報 · 実況ではありません")).font(.system(size: 10)).foregroundStyle(.white.opacity(0.55))
+        }.frame(maxWidth: .infinity).shadow(color: .black.opacity(0.12), radius: 7, y: 2)
+    }
+    private func highLow(_ label: String, value: Double?) -> some View {
+        HStack(spacing: 3) {
+            Text(label.map(String.init).joined(separator: "\n")).font(.system(size: 15, weight: .medium)).lineSpacing(-3)
+            Text(degree(value)).font(.system(size: 37, weight: .regular))
+        }
     }
     private var forecastCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(forecastSummary).font(.system(size: 15, weight: .medium)).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
+            HStack {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(t("天气状况", "天気の状況")).font(.system(size: 18, weight: .semibold))
+                    Text(forecastMode == 0 ? t("气温 (°C)", "気温 (°C)") : t("降水概率 (%)", "降水確率 (%)")).font(.system(size: 12))
+                }
+                Spacer()
+                Picker("", selection: $forecastMode) {
+                    Image(systemName: "cloud.sun.fill").tag(0)
+                    Image(systemName: "drop.fill").tag(1)
+                }.pickerStyle(.segmented).frame(width: 122)
+            }
             Divider().overlay(.white.opacity(0.12))
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 19) {
-                    ForEach(displaySlots.prefix(16)) { slot in
-                        VStack(spacing: 13) {
-                            Text(slot.id == current?.id ? t("当前", "現在") : format(slot.date, "H時")).font(.system(size: 15, weight: .semibold))
-                            weatherSymbol(slot.condition, at: slot.date).font(.system(size: 25)).frame(height: 28)
+                    ForEach((forecastMode == 0 ? displaySlots : probabilities).prefix(16)) { slot in
+                        VStack(spacing: 22) {
+                            Text(slot.id == current?.id ? t("当前", "現在") : format(slot.date, "H時")).font(.system(size: 17, weight: .semibold))
+                            weatherSymbol(slot.condition, at: slot.date).font(.system(size: 27)).frame(height: 32)
                             if let temperature = slot.temperature { Text(degree(temperature)).font(.system(size: 20, weight: .medium)) }
                             else { Text(slot.probability.map { "\($0)%" } ?? "—").font(.system(size: 18, weight: .medium)).foregroundStyle(.cyan) }
                         }.frame(minWidth: 42).accessibilityElement(children: .combine)
@@ -97,7 +124,7 @@ struct WeatherView: View {
     }
     private var daysCard: some View {
         VStack(alignment: .leading, spacing: 6) {
-            cardTitle(t("10日天气预报", "10日間の天気予報"), symbol: "calendar").padding(.bottom, 5)
+            Text(t("10日预报", "10日間の予報")).font(.caption).foregroundStyle(.white.opacity(0.55))
             ForEach(days) { day in
                 Divider().overlay(.white.opacity(0.08))
                 HStack(spacing: 10) {
@@ -146,12 +173,16 @@ struct WeatherView: View {
     }
     private var bottomBar: some View {
         HStack {
-            Button { map = true } label: { Image(systemName: "map").font(.title2).frame(width: 48, height: 44) }.accessibilityLabel(t("天气地图", "天気マップ"))
+            Button { map = true } label: { Image(systemName: "map").font(.system(size: 24, weight: .medium)).frame(width: 48, height: 48) }.glassEffect(.regular, in: .circle).accessibilityLabel(t("天气地图", "天気マップ"))
             Spacer()
-            Button { model.locate() } label: { Label(model.region.name, systemImage: "location.fill").font(.subheadline) }.accessibilityLabel(t("重新定位", "現在地を取得"))
+            HStack(spacing: 10) {
+                Button { model.locate() } label: { Image(systemName: "location.fill").font(.system(size: 12)) }.accessibilityLabel(t("定位", "現在地"))
+                Button { cities = true } label: { Circle().fill(.white.opacity(0.45)).frame(width: 7, height: 7) }.accessibilityLabel(t("城市列表", "都市一覧"))
+                Button { cities = true } label: { Circle().fill(.white.opacity(0.45)).frame(width: 7, height: 7) }.accessibilityLabel(t("城市列表", "都市一覧"))
+            }.padding(.horizontal, 20).frame(height: 48).glassEffect(.regular, in: .capsule)
             Spacer()
-            Button { cities = true } label: { Image(systemName: "list.bullet").font(.title2).frame(width: 48, height: 44) }.accessibilityLabel(t("城市与设置", "都市と設定"))
-        }.padding(.horizontal, 20).padding(.vertical, 4).background(.ultraThinMaterial)
+            Button { cities = true } label: { Image(systemName: "list.bullet").font(.system(size: 24, weight: .medium)).frame(width: 48, height: 48) }.glassEffect(.regular, in: .circle).accessibilityLabel(t("城市与设置", "都市と設定"))
+        }.padding(.horizontal, 26).padding(.vertical, 9)
     }
     private var footer: some View {
         VStack(spacing: 5) {
@@ -247,9 +278,9 @@ private struct SoraCard: ViewModifier {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     func body(content: Content) -> some View {
         content.padding(15)
-            .background(reduceTransparency ? Color(red: 0.15, green: 0.25, blue: 0.37) : Color.black.opacity(0.12), in: RoundedRectangle(cornerRadius: 16))
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.035), lineWidth: 0.5))
+            .background(reduceTransparency ? Color(red: 0.15, green: 0.25, blue: 0.37) : Color.black.opacity(0.12), in: RoundedRectangle(cornerRadius: 20))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+            .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.035), lineWidth: 0.5))
     }
 }
 extension View { func soraCard() -> some View { modifier(SoraCard()) } }
@@ -261,7 +292,7 @@ private struct WeatherSky: View {
     let rainy: Bool
     var body: some View {
         ZStack {
-            LinearGradient(colors: night ? [Color(red: 0.035, green: 0.085, blue: 0.19), Color(red: 0.12, green: 0.23, blue: 0.39), Color(red: 0.23, green: 0.36, blue: 0.49)] : [Color(red: 0.12, green: 0.42, blue: 0.73), Color(red: 0.28, green: 0.59, blue: 0.84), Color(red: 0.48, green: 0.69, blue: 0.85)], startPoint: .top, endPoint: .bottom)
+            LinearGradient(colors: night ? [Color(red: 0.035, green: 0.085, blue: 0.19), Color(red: 0.12, green: 0.23, blue: 0.39), Color(red: 0.23, green: 0.36, blue: 0.49)] : [Color(red: 0.56, green: 0.64, blue: 0.71), Color(red: 0.52, green: 0.61, blue: 0.69), Color(red: 0.48, green: 0.57, blue: 0.65)], startPoint: .top, endPoint: .bottom)
             if night {
                 Canvas { context, size in
                     for i in 0..<57 {
@@ -291,13 +322,14 @@ private struct WeatherSky: View {
 private struct WeatherCities: View {
     @ObservedObject var model: WeatherModel
     @State private var settings = false
+    @State private var query = ""
     @Environment(\.dismiss) private var dismiss
     @AppStorage("language") private var language = "zh-Hans"
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 13) {
-                    ForEach(Region.supported) { region in
+                    ForEach(Region.supported.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }) { region in
                         Button {
                             Task { await model.select(region) }; dismiss()
                         } label: {
@@ -307,13 +339,19 @@ private struct WeatherCities: View {
                                     Text(region.id == model.region.id ? (language == "ja" ? "選択中の都市" : "当前城市") : (language == "ja" ? "タップして予報を表示" : "轻点查看预报")).font(.subheadline).foregroundStyle(.white.opacity(0.75))
                                 }
                                 Spacer()
-                                if region.id == model.region.id { Image(systemName: "checkmark.circle.fill").font(.title2) }
+                                if region.id == model.region.id {
+                                    VStack(alignment: .trailing, spacing: 15) {
+                                        Text(model.weather?.slots.first(where: { $0.temperature != nil && $0.date <= Date() && $0.date.addingTimeInterval(10800) > Date() })?.temperature.map { "\(Int($0))°" } ?? "—").font(.system(size: 48, weight: .light))
+                                        if let day = model.weather?.tenDays(from: Date()).first { Text("↑ \(day.high.map { String(Int($0)) } ?? "—")° ↓ \(day.low.map { String(Int($0)) } ?? "—")°").font(.subheadline) }
+                                    }
+                                }
                             }.foregroundStyle(.white).padding(22).frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
                                 .background(LinearGradient(colors: [Color(red: 0.17, green: 0.32, blue: 0.53), Color(red: 0.37, green: 0.55, blue: 0.71)], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 22))
                         }.buttonStyle(.plain)
                     }
                 }.padding(18)
-            }.background(Color(red: 0.035, green: 0.055, blue: 0.09))
+            }.background(Color(red: 0.32, green: 0.36, blue: 0.41))
+                .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: language == "ja" ? "都市を検索" : "搜索城市")
                 .navigationTitle(language == "ja" ? "天気" : "天气")
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) { Button(language == "ja" ? "完了" : "完成") { dismiss() } }
