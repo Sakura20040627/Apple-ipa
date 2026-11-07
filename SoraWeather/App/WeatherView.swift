@@ -422,14 +422,19 @@ struct WeatherView: View {
 }
 private struct CityWeatherPage: View {
     @StateObject private var model: WeatherModel
+    let region: Region
     let active: Bool
     let select: (Region) -> Void
     init(region: Region, active: Bool, select: @escaping (Region) -> Void) {
-        _model = StateObject(wrappedValue: WeatherModel(initialRegion: region)); self.active = active; self.select = select
+        _model = StateObject(wrappedValue: WeatherModel(initialRegion: region)); self.region = region; self.active = active; self.select = select
     }
     var body: some View {
         WeatherPageContent(model: model, selectCity: select)
-            .task(id: active) { if active { await model.refresh() } }
-            .onChange(of: model.region.id) { _, _ in select(model.region) }
+            .task(id: active) {
+                if active {
+                    if model.region.id != region.id { await model.select(region) } else { await model.refresh() }
+                }
+            }
+            .onChange(of: model.region.id) { _, _ in if active { select(model.region) } }
     }
 }
