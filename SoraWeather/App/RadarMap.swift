@@ -132,10 +132,12 @@ private actor RadarTileCache {
     @Published var busy = false
     @Published var playing = true
     @Published var shown: RadarFrame?
+    @Published var revision = 0
     var loaded: Date?
     var selected: RadarFrame? { frames.indices.contains(index) ? frames[index] : nil }
     func load() async {
         available = false; failed = false; busy = true; shown = nil
+        frames = []; index = 0; loaded = nil; revision += 1
         await RadarTileCache.shared.resetFailures()
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--ui-test-radar-fail") {
@@ -189,6 +191,7 @@ private struct RainMap: UIViewRepresentable {
     let condition: String
     let frame: RadarFrame?
     let frames: [RadarFrame]
+    let revision: Int
     let focus: Int
     let satellite: Bool
     let reduceMotion: Bool
@@ -271,7 +274,7 @@ private struct RainMap: UIViewRepresentable {
             guard let map else { return }
             guard let frame = parent.frame else { stop(); clear(); request = ""; return }
             let keys = tiles(map)
-            let key = frame.id + keys.map { "\($0.z)/\($0.x)/\($0.y)" }.joined(separator: ",")
+            let key = frame.id + ":\(parent.revision):" + keys.map { "\($0.z)/\($0.x)/\($0.y)" }.joined(separator: ",")
             guard request != key else { return }
             request = key; stop()
             let token = generation
@@ -359,7 +362,7 @@ struct InternalWeatherMap: View {
     private func t(_ zh: String, _ ja: String) -> String { AppLanguage.code == "ja" ? ja : zh }
     var body: some View {
         ZStack(alignment: .top) {
-            RainMap(region: region, temperature: temperature, condition: condition, frame: radar.failed ? nil : radar.selected, frames: radar.frames, focus: focus, satellite: satellite, reduceMotion: reduceMotion, busy: { radar.busy = $0 }, visible: { radar.visible($0) }, failure: { radar.fail() }).ignoresSafeArea(.all)
+            RainMap(region: region, temperature: temperature, condition: condition, frame: radar.failed ? nil : radar.selected, frames: radar.frames, revision: radar.revision, focus: focus, satellite: satellite, reduceMotion: reduceMotion, busy: { radar.busy = $0 }, visible: { radar.visible($0) }, failure: { radar.fail() }).ignoresSafeArea(.all)
                 .accessibilityIdentifier("rainMap")
             GlassEffectContainer(spacing: 18) {
                 HStack(alignment: .top) {
