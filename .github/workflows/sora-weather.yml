@@ -51,7 +51,6 @@ jobs:
         run: bash scripts/simulator_smoke.sh
       - name: SwiftUI Instruments and UI regression
         timeout-minutes: 12
-        continue-on-error: true
         run: python3 scripts/profile_ui.py
       - uses: actions/upload-artifact@v4
         if: always()

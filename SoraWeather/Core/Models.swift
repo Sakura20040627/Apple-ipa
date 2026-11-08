@@ -62,6 +62,19 @@ public struct ForecastDay: Codable, Identifiable, Equatable, Sendable {
     public var probability: Int?
     public var condition: String
 }
+public enum ForecastRange {
+    public static func contains(_ date: Date, from now: Date) -> Bool {
+        let start = JapanTime.calendar.startOfDay(for: now)
+        guard let end = JapanTime.calendar.date(byAdding: .day, value: 7, to: start) else { return false }
+        return date >= start && date < end
+    }
+    public static func days(_ values: [ForecastDay], from now: Date) -> [ForecastDay] {
+        var seen = Set<String>()
+        return values.sorted { $0.date < $1.date }.filter {
+            contains($0.date, from: now) && (!$0.condition.isEmpty || $0.high != nil || $0.low != nil || $0.probability != nil) && seen.insert($0.id).inserted
+        }
+    }
+}
 public struct WeatherSnapshot: Codable, Sendable {
     public let region: Region
     public let source: String
@@ -70,11 +83,19 @@ public struct WeatherSnapshot: Codable, Sendable {
     public let days: [ForecastDay]
     public let slots: [ForecastSlot]
     public func stale(at now: Date) -> Bool { now.timeIntervalSince(issued) > 6*3600 || issued.timeIntervalSince(now) > 600 }
-    public func tenDays(from now: Date) -> [ForecastDay] {
-        (0..<10).compactMap { offset in
-            guard let date = JapanTime.calendar.date(byAdding: .day, value: offset, to: JapanTime.calendar.startOfDay(for: now)) else { return nil }
-            return days.first { $0.id == JapanTime.key(date) } ?? ForecastDay(date: date, high: nil, low: nil, probability: nil, condition: "")
-        }
+    public init(region: Region, source: String, issued: Date, fetched: Date, days: [ForecastDay], slots: [ForecastSlot]) {
+        self.region = region; self.source = source; self.issued = issued; self.fetched = fetched
+        self.days = ForecastRange.days(days, from: fetched)
+        self.slots = slots.filter { ForecastRange.contains($0.date, from: fetched) }.sorted { $0.date < $1.date }
+    }
+    private enum CodingKeys: String, CodingKey { case region, source, issued, fetched, days, slots }
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(region: try c.decode(Region.self, forKey: .region), source: try c.decode(String.self, forKey: .source), issued: try c.decode(Date.self, forKey: .issued), fetched: try c.decode(Date.self, forKey: .fetched), days: try c.decode([ForecastDay].self, forKey: .days), slots: try c.decode([ForecastSlot].self, forKey: .slots))
+    }
+    public func sevenDays(from now: Date) -> [ForecastDay] { ForecastRange.days(days, from: now) }
+    public func limited(to now: Date) -> WeatherSnapshot {
+        WeatherSnapshot(region: region, source: source, issued: issued, fetched: fetched, days: sevenDays(from: now), slots: slots.filter { ForecastRange.contains($0.date, from: now) })
     }
 }
 public struct RainPoint: Codable, Equatable, Sendable {

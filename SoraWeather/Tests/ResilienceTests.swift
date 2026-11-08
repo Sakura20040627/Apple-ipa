@@ -38,4 +38,57 @@ final class ResilienceTests: XCTestCase {
         let extra = WeatherSnapshot(region: .osaka, source: "Yahoo", issued: now.addingTimeInterval(-86400), fetched: now, days: [], slots: [])
         XCTAssertEqual(WeatherMerge.combine(primary: jma, supplement: extra).source, "JMA")
     }
+    func testSparseSixDaysDoNotCreateRows() {
+        let dates = [0, 1, 2, 4, 5, 6].map { JapanTime.calendar.date(byAdding: .day, value: $0, to: now)! }
+        let value = WeatherSnapshot(region: .osaka, source: "JMA", issued: now, fetched: now, days: dates.map { ForecastDay(date: $0, high: 20, low: nil, probability: nil, condition: "晴れ") }, slots: [])
+        XCTAssertEqual(value.sevenDays(from: now).count, 6)
+        XCTAssertFalse(value.days.contains { $0.id == "2026-11-11" })
+    }
+    func testEmptyDailyRowsAreDiscarded() {
+        let value = WeatherSnapshot(region: .osaka, source: "JMA", issued: now, fetched: now, days: [ForecastDay(date: now, high: nil, low: nil, probability: nil, condition: "")], slots: [])
+        XCTAssertTrue(value.days.isEmpty); XCTAssertTrue(value.sevenDays(from: now).isEmpty)
+    }
+    func testJMAFiltersExtendedDatesAndIgnoresWindPayload() throws {
+        var root = try XCTUnwrap(JSONSerialization.jsonObject(with: data("jma-osaka", "json")) as? [[String: Any]])
+        var series = try XCTUnwrap(root[1]["timeSeries"] as? [[String: Any]])
+        var areas = try XCTUnwrap(series[0]["areas"] as? [[String: Any]])
+        series[0]["timeDefines"] = (0..<10).map { "2026-11-\(String(format: "%02d", 8+$0))T00:00:00+09:00" }
+        areas[0]["weatherCodes"] = Array(repeating: "101", count: 10)
+        areas[0]["winds"] = ["malformed": true]
+        series[0]["areas"] = areas; root[1]["timeSeries"] = series
+        let result = try JMAParser.forecast(JSONSerialization.data(withJSONObject: root), region: .osaka, now: now)
+        XCTAssertEqual(result.days.count, 7); XCTAssertEqual(result.days.last?.id, "2026-11-14")
+    }
+    func testResilientYahooAndMergeRespectSevenDayLimit() throws {
+        let jma = try JMAParser.forecast(data("jma-osaka", "json"), region: .osaka, now: now)
+        let yahoo = try XCTUnwrap(YahooParser.resilientForecast(String(decoding: data("yahoo-osaka"), as: UTF8.self), region: .osaka, now: now))
+        XCTAssertEqual(yahoo.days.count, 7)
+        let merged = WeatherMerge.combine(primary: jma, supplement: yahoo)
+        XCTAssertEqual(merged.days.count, 7)
+        XCTAssertTrue(merged.days.allSatisfy { ForecastRange.contains($0.date, from: now) })
+    }
+    func testLegacyCacheDropsExtraDaysSlotsAndWindFields() throws {
+        let original = WeatherSnapshot(region: .osaka, source: "JMA", issued: now, fetched: now, days: [], slots: [])
+        var root = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
+        root["days"] = (0..<10).map { offset -> [String: Any] in
+            ["date": now.addingTimeInterval(Double(offset)*86400).timeIntervalSinceReferenceDate, "high": 20, "condition": "晴れ", "windSpeed": 99]
+        }
+        root["slots"] = [["date": now.addingTimeInterval(8*86400).timeIntervalSinceReferenceDate, "condition": "雨", "durationHours": 3, "windDirection": "N"]]
+        root["wind"] = ["speed": 99]
+        let decoded = try JSONDecoder().decode(WeatherSnapshot.self, from: JSONSerialization.data(withJSONObject: root))
+        XCTAssertEqual(decoded.days.count, 7); XCTAssertTrue(decoded.slots.isEmpty)
+        let rewritten = String(decoding: try JSONEncoder().encode(decoded), as: UTF8.self)
+        XCTAssertFalse(rewritten.contains("wind"))
+        XCTAssertEqual(decoded.limited(to: now.addingTimeInterval(2*86400)).days.count, 5)
+    }
+    func testSevenDayBoundaryUsesJapanMidnight() {
+        let late = JapanTime.iso("2026-12-31T23:59:00+09:00")!
+        XCTAssertTrue(ForecastRange.contains(JapanTime.iso("2027-01-06T23:59:59+09:00")!, from: late))
+        XCTAssertFalse(ForecastRange.contains(JapanTime.iso("2027-01-07T00:00:00+09:00")!, from: late))
+    }
+    func testDayEightRainCannotCreateNotification() {
+        let slot = ForecastSlot(date: now.addingTimeInterval(7*86400), temperature: nil, rainMM: 20, probability: 100, condition: "雨", durationHours: 6)
+        let value = WeatherSnapshot(region: .osaka, source: "JMA", issued: now, fetched: now, days: [], slots: [slot])
+        XCTAssertTrue(value.slots.isEmpty); XCTAssertNil(ForecastRainPolicy.window(snapshot: value, now: now))
+    }
 }

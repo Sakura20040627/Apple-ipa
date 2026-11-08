@@ -25,9 +25,9 @@ struct WeatherPageContent: View {
     private var temperatureSlots: [ForecastSlot] { slots.filter { $0.temperature != nil } }
     private var displaySlots: [ForecastSlot] { temperatureSlots.isEmpty ? slots : temperatureSlots }
     private var current: ForecastSlot? { temperatureSlots.first { $0.date <= Date() && $0.date.addingTimeInterval(Double($0.durationHours)*3600) > Date() } }
-    private var today: ForecastDay? { model.weather?.tenDays(from: Date()).first }
+    private var today: ForecastDay? { days.first { JapanTime.calendar.isDateInToday($0.date) } }
     private var summary: String { current?.condition ?? today?.condition ?? "" }
-    private var days: [ForecastDay] { model.weather?.tenDays(from: Date()) ?? [] }
+    private var days: [ForecastDay] { model.weather?.sevenDays(from: Date()) ?? [] }
     private var night: Bool { let h = JapanTime.calendar.component(.hour, from: Date()); return h < 6 || h >= 18 }
     private var probabilities: [ForecastSlot] { slots.filter { $0.probability != nil } }
     private var minTemp: Double { days.compactMap(\.low).min() ?? 0 }
@@ -94,14 +94,13 @@ struct WeatherPageContent: View {
             HStack {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(t("未来24小时", "今後24時間")).font(.system(size: 18, weight: .semibold))
-                    Text(forecastMode == 0 ? t("气温 (°C)", "気温 (°C)") : forecastMode == 1 ? t("降水", "降水") : t("风", "風")).font(.system(size: 12))
+                    Text(forecastMode == 0 ? t("气温 (°C)", "気温 (°C)") : t("降水", "降水")).font(.system(size: 12))
                 }
                 Spacer()
                 Picker("", selection: $forecastMode) {
-                    Image(systemName: "cloud.sun.fill").tag(0)
-                    Image(systemName: "drop.fill").tag(1)
-                    Image(systemName: "wind").tag(2)
-                }.pickerStyle(.segmented).frame(width: 144)
+                    Image(systemName: "cloud.sun.fill").tag(0).accessibilityLabel(t("天气", "天気"))
+                    Image(systemName: "drop.fill").tag(1).accessibilityLabel(t("降水", "降水"))
+                }.pickerStyle(.segmented).frame(width: 104)
             }
             Divider().overlay(.white.opacity(0.12))
             ScrollView(.horizontal, showsIndicators: false) {
@@ -109,8 +108,7 @@ struct WeatherPageContent: View {
                     ForEach((forecastMode == 1 && !probabilities.isEmpty ? probabilities : displaySlots).prefix(16)) { slot in
                         VStack(spacing: 18) {
                             Text(slot.date <= Date() ? t("现在", "現在") : format(slot.date, language == "ja" ? "H時" : "H时")).font(.system(size: 15, weight: .semibold))
-                            if forecastMode == 2 { Image(systemName: "wind").font(.system(size: 25)).frame(height: 30) }
-                            else if forecastMode == 1 { Image(systemName: "drop.fill").foregroundStyle(.cyan).font(.system(size: 25)).frame(height: 30) }
+                            if forecastMode == 1 { Image(systemName: "drop.fill").foregroundStyle(.cyan).font(.system(size: 25)).frame(height: 30) }
                             else { weatherSymbol(slot.condition, at: slot.date).font(.system(size: 25)).frame(height: 30) }
                             Text(forecastValue(slot)).font(.system(size: 18, weight: .semibold)).foregroundStyle(forecastMode == 1 ? Color.cyan : Color.white).minimumScaleFactor(0.7).lineLimit(1)
                         }.containerRelativeFrame(.horizontal, count: 6, spacing: 0).accessibilityElement(children: .combine)
@@ -121,7 +119,6 @@ struct WeatherPageContent: View {
         }.soraCard()
     }
     private func forecastValue(_ slot: ForecastSlot) -> String {
-        if forecastMode == 2 { return t("未提供", "未提供") }
         if forecastMode == 1 {
             if let probability = slot.probability { return "\(probability)%" }
             if let rain = slot.rainMM { return "\(rain.formatted(.number.precision(.fractionLength(0...1))))mm" }
@@ -137,12 +134,12 @@ struct WeatherPageContent: View {
         return t("\(condition(today?.condition ?? ""))。\(nextDayText)", "\(condition(today?.condition ?? ""))。\(nextDayText)")
     }
     private var nextDayText: String {
-        guard days.count > 1, let high = days[1].high else { return t("下拉可更新天气。", "下に引いて更新できます。") }
+        guard let tomorrow = JapanTime.calendar.date(byAdding: .day, value: 1, to: Date()), let high = days.first(where: { $0.id == JapanTime.key(tomorrow) })?.high else { return t("下拉可更新天气。", "下に引いて更新できます。") }
         return t("明天最高气温 \(degree(high))。", "明日の最高気温は\(degree(high))。")
     }
     private var daysCard: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(t("10日预报", "10日間の予報")).font(.caption).foregroundStyle(.white.opacity(0.55))
+            Text(t("7日预报", "7日間の予報")).font(.caption).foregroundStyle(.white.opacity(0.55))
             ForEach(days) { day in
                 Divider().overlay(.white.opacity(0.08))
                 HStack(spacing: 10) {
@@ -419,7 +416,7 @@ private struct CitySummaryCard: View {
     private var language: String { AppLanguage.code }
     private var night: Bool { let hour = JapanTime.calendar.component(.hour, from: Date()); return hour < 6 || hour >= 18 }
     private var current: ForecastSlot? { weather?.slots.first { $0.temperature != nil && $0.date <= Date() && $0.date.addingTimeInterval(Double($0.durationHours)*3600) > Date() } }
-    private var day: ForecastDay? { weather?.tenDays(from: Date()).first }
+    private var day: ForecastDay? { weather?.sevenDays(from: Date()).first { JapanTime.key($0.date) == JapanTime.key(Date()) } }
     private var description: String {
         let text = current?.condition ?? day?.condition ?? ""
         if text.isEmpty { return language == "ja" ? "更新待ち" : "等待更新" }

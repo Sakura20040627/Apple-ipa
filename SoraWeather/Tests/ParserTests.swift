@@ -5,10 +5,10 @@ final class ParserTests: XCTestCase {
     func fixture(_ name: String, _ ext: String = "json") throws -> Data { try Data(contentsOf: XCTUnwrap(Bundle.module.url(forResource: name, withExtension: ext, subdirectory: "Fixtures"))) }
     func html(_ name: String) throws -> String { String(decoding: try fixture(name, "html"), as: UTF8.self) }
     let now = JapanTime.iso("2026-11-08T02:00:00+09:00")!
-    func testYahooLiveExtractEightDays() throws {
+    func testYahooLiveExtractCappedAtSevenDays() throws {
         let result = try YahooParser.forecast(html("yahoo-osaka"), region: .osaka, now: now)
-        XCTAssertEqual(result.days.count, 8); XCTAssertEqual(result.days.first?.high, 18); XCTAssertEqual(result.days.first?.low, 10)
-        XCTAssertEqual(result.days.last?.probability, 70); XCTAssertEqual(result.source, "Yahoo! JAPAN")
+        XCTAssertEqual(result.days.count, 7); XCTAssertEqual(result.days.first?.high, 18); XCTAssertEqual(result.days.first?.low, 10)
+        XCTAssertEqual(result.days.last?.id, "2026-11-14"); XCTAssertEqual(result.days.last?.probability, 10); XCTAssertEqual(result.source, "Yahoo! JAPAN")
         XCTAssertEqual(result.slots.count, 8); XCTAssertEqual(result.slots[3].probability, 10)
         XCTAssertNil(result.days.first?.probability, "Six-hour probability is not a daily probability")
     }
@@ -40,7 +40,7 @@ final class ParserTests: XCTestCase {
     }
     func testJMAEmptyStringsRemainMissing() throws {
         let w = try JMAParser.forecast(fixture("jma-osaka"), region: .osaka, now: now)
-        let day = try XCTUnwrap(w.days.first { $0.id == "2026-11-07" }); XCTAssertNil(day.high); XCTAssertNil(day.low); XCTAssertNil(day.probability)
+        let day = try XCTUnwrap(w.days.first { $0.id == "2026-11-08" }); XCTAssertNil(day.probability); XCTAssertFalse(w.days.contains { $0.id == "2026-11-07" })
     }
     func testJMATodayTemperatureForecastNotObservation() throws {
         let w = try JMAParser.forecast(fixture("jma-osaka"), region: .osaka, now: now)
@@ -62,9 +62,9 @@ final class ParserTests: XCTestCase {
         let bytes = Data(#"[{"eid":"1","rdt":"2026-11-08T00:00:00+09:00","anm":"old"},{"eid":"1","rdt":"2026-11-08T01:00:00+09:00","ift":"取消"}]"#.utf8)
         XCTAssertTrue(try JMAParser.earthquakes(bytes).isEmpty)
     }
-    func testTenDaysMissingNotFabricated() throws {
+    func testSevenDaysWithoutPlaceholders() throws {
         let w = try YahooParser.forecast(html("yahoo-osaka"), region: .osaka, now: now)
-        let days = w.tenDays(from: now); XCTAssertEqual(days.count, 10); XCTAssertTrue(days[8].condition.isEmpty); XCTAssertNil(days[9].high); XCTAssertEqual(days[9].id, "2026-11-17")
+        let days = w.sevenDays(from: now); XCTAssertEqual(days.count, 7); XCTAssertFalse(days.contains { $0.condition.isEmpty }); XCTAssertEqual(days.last?.id, "2026-11-14")
     }
     func testJapanMidnightAndYearRollover() {
         let ref = JapanTime.iso("2026-12-31T23:50:00+09:00")!

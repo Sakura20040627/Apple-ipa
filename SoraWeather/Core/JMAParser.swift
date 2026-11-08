@@ -25,6 +25,7 @@ public enum JMAParser {
                 for values in series.areas where [region.forecastArea, region.station, region.office].contains(values.area.code) {
                     for (i, text) in series.timeDefines.enumerated() {
                         guard let date = JapanTime.iso(text) else { throw SoraError.invalidData }
+                        guard ForecastRange.contains(date, from: now) else { continue }
                         let key = JapanTime.key(date)
                         var day = days[key] ?? ForecastDay(date: JapanTime.calendar.startOfDay(for: date), high: nil, low: nil, probability: nil, condition: "")
                         if day.condition.isEmpty { day.condition = at(values.weathers, i) ?? codeDescription(at(values.weatherCodes, i) ?? "") }

@@ -20,15 +20,18 @@ actor WeatherService {
         FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("weather-\(region.id).json")
     }
     func cached(_ region: Region) -> WeatherSnapshot? {
-        if let value = memory[region.id] { return value }
+        if let value = memory[region.id] { return value.limited(to: Date()) }
         guard let data = try? Data(contentsOf: cacheURL(region)), let value = try? JSONDecoder().decode(WeatherSnapshot.self, from: data), value.region == region else { return nil }
-        return value
+        let normalized = value.limited(to: Date())
+        memory[region.id] = normalized
+        if let bytes = try? JSONEncoder().encode(normalized) { try? bytes.write(to: cacheURL(region), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]) }
+        return normalized
     }
     struct Result: Sendable { let weather: WeatherSnapshot?; let cached: Bool; let yahooFailed: Bool }
     func refresh(_ region: Region, publish: (@Sendable (WeatherSnapshot) async -> Void)? = nil) async -> Result {
         let now = Date()
         if let last = refreshes[region.id], now.timeIntervalSince(last) < 300, let value = memory[region.id] {
-            return Result(weather: value, cached: false, yahooFailed: UserDefaults.standard.bool(forKey: "yahooUnavailable." + region.id))
+            return Result(weather: value.limited(to: now), cached: false, yahooFailed: UserDefaults.standard.bool(forKey: "yahooUnavailable." + region.id))
         }
         async let primaryResult = loadJMA(region, now: now)
         async let supplementResult = loadYahoo(region, now: now)
@@ -43,7 +46,7 @@ actor WeatherService {
         }
         let value = WeatherMerge.combine(primary: primary, supplement: supplement)
         save(value)
-        return Result(weather: value, cached: false, yahooFailed: unavailable)
+        return Result(weather: value.limited(to: now), cached: false, yahooFailed: unavailable)
     }
     private func loadJMA(_ region: Region, now: Date) async -> WeatherSnapshot? {
         guard let bytes = try? await data(URL(string: "https://www.jma.go.jp/bosai/forecast/data/forecast/\(region.office).json")!),

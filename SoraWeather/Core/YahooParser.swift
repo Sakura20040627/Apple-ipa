@@ -30,8 +30,9 @@ public enum YahooParser {
         let blocks = city[1].components(separatedBy: "<p class=\"date\">").dropFirst()
         var days: [ForecastDay] = []; var slots: [ForecastSlot] = []
         for block in blocks {
-            guard let date = HTML.day(block, near: issued),
-                  let condition = HTML.groups(#"<p class="pict">.*?alt="([^"]+)""#, block).first?[1],
+            guard let date = HTML.day(block, near: issued) else { throw SoraError.invalidData }
+            guard ForecastRange.contains(date, from: now) else { continue }
+            guard let condition = HTML.groups(#"<p class="pict">.*?alt="([^"]+)""#, block).first?[1],
                   let highText = HTML.groups(#"class="high"><em>(.*?)</em>"#, block).first?[1],
                   let lowText = HTML.groups(#"class="low"><em>(.*?)</em>"#, block).first?[1] else { throw SoraError.invalidData }
             // Preserve interval probabilities. A maximum across intervals is not a daily probability.
@@ -51,7 +52,9 @@ public enum YahooParser {
             let count = rows[0].count
             guard count > 1, rows.prefix(4).allSatisfy({ $0.count == count }) else { throw SoraError.invalidData }
             for i in 1..<count {
-                guard let date = HTML.day(rows[0][i], near: issued), let condition = HTML.groups(#"alt="([^"]+)""#, rows[1][i]).first?[1] else { throw SoraError.invalidData }
+                guard let date = HTML.day(rows[0][i], near: issued) else { throw SoraError.invalidData }
+                guard ForecastRange.contains(date, from: now) else { continue }
+                guard let condition = HTML.groups(#"alt="([^"]+)""#, rows[1][i]).first?[1] else { throw SoraError.invalidData }
                 let temps = HTML.groups(#"<font[^>]*>(.*?)</font>"#, rows[2][i]).map { HTML.number($0[1]) }
                 guard temps.count == 2 else { throw SoraError.invalidData }
                 days.append(ForecastDay(date: date, high: temps[0], low: temps[1], probability: HTML.number(rows[3][i]).map(Int.init), condition: condition))
@@ -74,7 +77,7 @@ public enum YahooParser {
                 slots.append(ForecastSlot(date: date, temperature: HTML.number(rows[2][i]), rainMM: HTML.number(rows[4][i]), probability: nil, condition: condition, durationHours: 3))
             }
         }
-        guard !slots.isEmpty else { throw SoraError.noForecast }; return (issued, slots)
+        guard !slots.isEmpty else { throw SoraError.noForecast }; return (issued, slots.filter { ForecastRange.contains($0.date, from: issued) })
     }
     public static func rain(_ data: Data) throws -> [RainPoint] {
         guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -101,7 +104,7 @@ extension YahooParser {
         let blocks = HTML.groups(#"<p\b[^>]*class\s*=\s*"[^"]*\bdate\b[^"]*"[^>]*>(.*?)(?=<p\b[^>]*class\s*=\s*"[^"]*\bdate\b|id\s*=\s*"yjw_week"|$)"#, html)
         for match in blocks.prefix(2) {
             let block = match[1]
-            guard let date = HTML.day(block, near: issued) else { continue }
+            guard let date = HTML.day(block, near: issued), ForecastRange.contains(date, from: now) else { continue }
             let condition = HTML.groups(#"<p\b[^>]*class\s*=\s*"[^"]*pict[^"]*"[^>]*>.*?alt\s*=\s*"([^"]*)""#, block).first?[1] ?? ""
             let high = HTML.groups(#"class\s*=\s*"[^"]*\bhigh\b[^"]*"[^>]*>\s*<em[^>]*>(.*?)</em>"#, block).first.flatMap { HTML.number($0[1]) }
             let low = HTML.groups(#"class\s*=\s*"[^"]*\blow\b[^"]*"[^>]*>\s*<em[^>]*>(.*?)</em>"#, block).first.flatMap { HTML.number($0[1]) }
@@ -126,7 +129,7 @@ extension YahooParser {
             }
             if count > 1 {
                 for i in 1..<count {
-                    guard let date = cell(0,i).flatMap({ HTML.day($0, near: issued) }) else { continue }
+                    guard let date = cell(0,i).flatMap({ HTML.day($0, near: issued) }), ForecastRange.contains(date, from: now) else { continue }
                     let condition = cell(1,i).flatMap { HTML.groups(#"alt\s*=\s*"([^"]*)""#, $0).first?[1] } ?? ""
                     let temperatureCell = cell(2,i) ?? ""
                     let high = HTML.groups(##"<font[^>]*color\s*=\s*"#?ff3300"[^>]*>(.*?)</font>"##, temperatureCell).first.flatMap { HTML.number($0[1]) }
@@ -156,6 +159,6 @@ extension YahooParser {
                 if temp != nil || amount != nil || !condition.isEmpty { slots.append(ForecastSlot(date: date, temperature: temp, rainMM: amount, probability: nil, condition: condition, durationHours: 3)) }
             }
         }
-        return slots.isEmpty ? nil : (issued, slots)
+        return slots.isEmpty ? nil : (issued, slots.filter { ForecastRange.contains($0.date, from: issued) })
     }
 }

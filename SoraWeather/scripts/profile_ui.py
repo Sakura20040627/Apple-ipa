@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Real xctrace capture; no synthetic FPS numbers. Simulator results are not device 120Hz validation."""
-import subprocess,json,pathlib,os,xml.etree.ElementTree as ET
+import subprocess,json,pathlib,os,sys,xml.etree.ElementTree as ET
 build=pathlib.Path('build');build.mkdir(exist_ok=True)
 def run(args,**kwargs):return subprocess.run(args,**kwargs)
 root=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','booted','--json']))
@@ -12,13 +12,14 @@ with (build/'ui-build-tests.log').open('w') as log:
  r=run(base+['build-for-testing'],stdout=log,stderr=subprocess.STDOUT)
 if r.returncode:raise SystemExit('UI test build failed; see ui-build-tests.log')
 with (build/'instruments-templates.log').open('w') as log:run(['xcrun','xctrace','list','templates'],stdout=log,stderr=subprocess.STDOUT)
-trace=build/'SwiftUI.trace';report=[]
+trace=build/'SwiftUI.trace';report=[];ui_code=1
 log=(build/'instruments.log').open('w')
 record=subprocess.Popen(['xcrun','xctrace','record','--template','SwiftUI','--device',device,'--all-processes','--time-limit','90s','--output',str(trace),'--no-prompt'],stdout=log,stderr=subprocess.STDOUT)
 try:
  with (build/'ui-tests.log').open('w') as tests:
   result=run(base+['test-without-building','-only-testing:SoraWeatherUITests','-resultBundlePath','build/UIRegression.xcresult'],stdout=tests,stderr=subprocess.STDOUT,timeout=240)
- report.append('UI regression exit code: '+str(result.returncode))
+ ui_code=result.returncode
+ report.append('UI regression exit code: '+str(ui_code))
 except subprocess.TimeoutExpired:report.append('UI regression timed out')
 try: code=record.wait(timeout=150)
 except subprocess.TimeoutExpired:
@@ -45,3 +46,6 @@ if trace.exists() and code==0:
 else:report.append('SwiftUI capture unavailable or failed; no measured bottleneck or FPS claim is possible.')
 report.append('Environment: GitHub macOS runner / iOS simulator. No physical ProMotion iPhone attached; 120fps cannot be certified.')
 (build/'performance-summary.txt').write_text('\n'.join(report)+'\n');print('\n'.join(report))
+
+# UI failures must fail CI. Unsupported simulator profiling is reported separately.
+sys.exit(ui_code)
