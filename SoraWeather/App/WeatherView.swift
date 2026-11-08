@@ -76,7 +76,7 @@ struct WeatherPageContent: View {
     }
     private var hero: some View {
         VStack(spacing: 8) {
-            Text(model.region.name).font(.system(size: 34, weight: .medium))
+            Text(model.region.name).font(.system(size: 34, weight: .medium)).accessibilityIdentifier("cityTitle." + model.region.id)
             Text(current?.temperature.map { degree($0) } ?? "—°").font(.system(size: 96, weight: .thin)).tracking(-3).padding(.leading, 10).contentTransition(.numericText())
             HStack(spacing: 18) { highLow(t("最高", "最高"), value: today?.high); highLow(t("最低", "最低"), value: today?.low) }
             Text(condition(summary)).font(.system(size: 21, weight: .semibold))
@@ -519,15 +519,19 @@ struct WeatherView: View {
     @State private var pool = WeatherPagePool()
     @Environment(\.scenePhase) private var phase
     var body: some View {
+        GeometryReader { geometry in
         TabView(selection: Binding(get: { store.selectedID }, set: { store.select($0) })) {
             ForEach(store.cities) { city in
                 Group {
                     if pool.retainedIDs(cities: store.cities, selected: store.selectedID).contains(city.id) {
                         RetainedCityPage(city: city, model: pool.model(for: city), active: store.selectedID == city.id, locate: { model.locate(); store.select(CityPersistence.locationID) }) { store.select($0) }
+                            .safeAreaPadding(EdgeInsets(top: geometry.safeAreaInsets.top, leading: geometry.safeAreaInsets.leading, bottom: geometry.safeAreaInsets.bottom, trailing: geometry.safeAreaInsets.trailing))
                     } else { Color.clear }
                 }.tag(city.id)
             }
         }.tabViewStyle(.page(indexDisplayMode: .never))
+            .ignoresSafeArea(.all)
+        }
             .background(Color("LaunchBackground").ignoresSafeArea(.all))
             .onAppear { store.select(store.selectedID); pool.prune(cities: store.cities, selected: store.selectedID) }
             .onChange(of: store.selectedID) { _, _ in pool.prune(cities: store.cities, selected: store.selectedID) }
