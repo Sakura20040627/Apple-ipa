@@ -17,7 +17,7 @@ log=(build/'instruments.log').open('w')
 record=subprocess.Popen(['xcrun','xctrace','record','--template','SwiftUI','--device',device,'--all-processes','--time-limit','90s','--output',str(trace),'--no-prompt'],stdout=log,stderr=subprocess.STDOUT)
 try:
  with (build/'ui-tests.log').open('w') as tests:
-  result=run(base+['test-without-building','-only-testing:SoraWeatherUITests','-resultBundlePath','build/UIRegression.xcresult'],stdout=tests,stderr=subprocess.STDOUT,timeout=360)
+  result=run(base+['test-without-building','-only-testing:SoraWeatherUITests','-resultBundlePath','build/UIRegression.xcresult'],stdout=tests,stderr=subprocess.STDOUT,timeout=480)
  ui_code=result.returncode
  report.append('UI regression exit code: '+str(ui_code))
 except subprocess.TimeoutExpired:report.append('UI regression timed out')

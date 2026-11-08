@@ -143,7 +143,7 @@ private actor RadarTileCache {
             let text = f.string(from: Date())
             frames = RadarFrame(base: text, valid: text).map { [$0] } ?? []; index = 0; return
         }
-        if ProcessInfo.processInfo.arguments.contains("--ui-test-offline") { fail(); return }
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-offline") && !ProcessInfo.processInfo.arguments.contains("--ui-test-radar-live") { fail(); return }
         #endif
         do {
             async let history = Self.fetch("N1")
@@ -278,9 +278,10 @@ private struct RainMap: UIViewRepresentable {
             link?.invalidate(); link = nil
             if let incoming { map.removeOverlay(incoming); renderers[ObjectIdentifier(incoming)] = nil; self.incoming = nil }
             if let current { renderers[ObjectIdentifier(current)]?.alpha = 0.75 }
-            parent.busy(true)
             preparation = Task { @MainActor [weak self] in
                 guard let self else { return }
+                guard !Task.isCancelled, self.generation == token else { return }
+                self.parent.busy(true)
                 do {
                     let center = map.centerCoordinate
                     guard (20...48).contains(center.latitude), (118...150).contains(center.longitude), !keys.isEmpty else { throw SoraError.noForecast }

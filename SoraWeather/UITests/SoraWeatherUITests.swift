@@ -74,6 +74,22 @@ final class SoraWeatherUITests: XCTestCase {
         let map = XCTAttachment(screenshot: app.screenshot()); map.name = "radar-failure-retains-map-bubble"; map.lifetime = .keepAlways; add(map)
         app.buttons["closeMap"].tap()
     }
+    func testLiveRadarPlayback() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-reset", "--ui-test-offline", "--ui-test-radar-live"]
+        app.launch(); dismissLocationPrompt()
+        XCTAssertTrue(app.buttons["openMap"].waitForExistence(timeout: 20)); app.buttons["openMap"].tap()
+        let playback = app.descendants(matching: .any)["rainPlayback"]
+        let available = playback.waitForExistence(timeout: 90)
+        let capture = XCTAttachment(screenshot: app.screenshot()); capture.name = available ? "live-jma-radar-playback" : "live-jma-radar-unavailable"; capture.lifetime = .keepAlways; add(capture)
+        guard available else { throw XCTSkip("Live JMA rain tiles unavailable from CI; deterministic failure fallback is tested separately.") }
+        XCTAssertTrue(app.descendants(matching: .any)["rainLegend"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["temperatureBubble"].exists)
+        let timeline = app.sliders["rainTimeline"]
+        XCTAssertTrue(timeline.exists); timeline.adjust(toNormalizedSliderPosition: 0.4)
+        XCTAssertTrue(playback.exists)
+        app.buttons["closeMap"].tap()
+    }
     private func assertScope(_ app: XCUIApplication, region: String) {
         let value = app.staticTexts["forecastLoadScope"]
         XCTAssertTrue(value.waitForExistence(timeout: 10))
