@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main struct SoraWeatherApp: App {
-    @StateObject private var model = WeatherModel()
+    @StateObject private var model = WeatherModel(locationCoordinatorOnly: true)
     private var language: String { AppLanguage.code }
     @AppStorage("autoLocation") private var autoLocation = true
     @Environment(\.scenePhase) private var phase

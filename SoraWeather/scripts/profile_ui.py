@@ -4,7 +4,8 @@ import subprocess,json,pathlib,os,xml.etree.ElementTree as ET
 build=pathlib.Path('build');build.mkdir(exist_ok=True)
 def run(args,**kwargs):return subprocess.run(args,**kwargs)
 root=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','booted','--json']))
-device=next((d['udid'] for group in root['devices'].values() for d in group if d.get('state')=='Booted'),None)
+saved=build/'simulator-udid.txt'
+device=saved.read_text().strip() if saved.exists() else next((d['udid'] for group in root['devices'].values() for d in group if d.get('state')=='Booted'),None)
 if not device:raise SystemExit('No booted simulator for SwiftUI trace')
 base=['xcodebuild','-project','SoraWeather.xcodeproj','-scheme','SoraWeather','-destination','id='+device,'-derivedDataPath','build/DerivedData','CODE_SIGNING_ALLOWED=NO']
 with (build/'ui-build-tests.log').open('w') as log:

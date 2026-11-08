@@ -6,6 +6,7 @@ import SafariServices
 struct WeatherPageContent: View {
     @ObservedObject var model: WeatherModel
     var selectCity: ((String) -> Void)? = nil
+    var requestLocation: (() -> Void)? = nil
     var cityID: String = CityPersistence.locationID
     var isActive: Bool = true
     @ObservedObject private var cityStore = CityStore.shared
@@ -65,9 +66,9 @@ struct WeatherPageContent: View {
             .foregroundStyle(.white)
             .toolbar(.hidden, for: .navigationBar)
             .overlay(alignment: .bottom) { bottomBar }
-            .fullScreenCover(isPresented: $cities) { WeatherCities(model: model, selectCity: selectCity) }
+            .fullScreenCover(isPresented: $cities) { WeatherCities(model: model, selectCity: selectCity, requestLocation: requestLocation) }
             .fullScreenCover(isPresented: $map) { InternalWeatherMap(region: model.region, temperature: current?.temperature, condition: summary) }
-            .sheet(isPresented: $settings) { SettingsView(model: model) }
+            .sheet(isPresented: $settings) { SettingsView(model: model, onLocate: requestLocation) }
             .sheet(item: $webpage) { InternalBrowser(url: $0.url) }
             .environment(\.openURL, OpenURLAction { url in webpage = InternalPage(url: url); return .handled })
 
@@ -194,7 +195,7 @@ struct WeatherPageContent: View {
                 Button { map = true } label: { Image(systemName: "map").font(.system(size: 24, weight: .medium)).frame(width: 50, height: 50) }.glassEffect(.regular, in: .circle).accessibilityLabel(t("地图", "マップ"))
                 Spacer(minLength: 10)
                 HStack(spacing: 8) {
-                    Button { model.locate() } label: { Image(systemName: "location.fill").font(.system(size: 11)).frame(width: 20, height: 42) }.accessibilityLabel(t("定位", "現在地"))
+                    Button { if let requestLocation { requestLocation() } else { model.locate() } } label: { Image(systemName: "location.fill").font(.system(size: 11)).frame(width: 20, height: 42) }.accessibilityLabel(t("定位", "現在地"))
                     if cityStore.cities.count > 6 {
                         Text("\((cityStore.cities.firstIndex { $0.id == cityID } ?? 0) + 1)/\(cityStore.cities.count)").font(.caption.weight(.semibold)).monospacedDigit().accessibilityIdentifier("cityPageCounter")
                     } else {
@@ -316,6 +317,7 @@ private struct WeatherSky: View, Equatable {
 private struct WeatherCities: View {
     @ObservedObject var model: WeatherModel
     var selectCity: ((String) -> Void)? = nil
+    var requestLocation: (() -> Void)? = nil
     @ObservedObject private var store = CityStore.shared
     @State private var settings = false
     @State private var query = ""
@@ -349,6 +351,7 @@ private struct WeatherCities: View {
                                     CitySummaryCard(region: city.region, weather: city.region.id == model.region.id ? (model.weather ?? cache[city.region.id]) : cache[city.region.id], isLocation: city.isLocation)
                                 }.buttonStyle(.plain).deleteDisabled(city.isLocation).moveDisabled(city.isLocation)
                                     .accessibilityIdentifier("cityRow." + city.region.id)
+                                    .listRowBackground(Color.clear).listRowSeparator(.hidden).listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                             }.onDelete(perform: store.remove).onMove(perform: store.move)
                         } else {
                             Section(t("JMA 预报区", "JMA予報区")) {
@@ -370,7 +373,7 @@ private struct WeatherCities: View {
                         TextField(t("搜索城市", "都市を検索"), text: $query).font(.body).autocorrectionDisabled().submitLabel(.search).onSubmit { startSearch() }.accessibilityIdentifier("citySearch")
                     }.padding(.horizontal, 19).frame(height: 52).glassEffect(.regular, in: .capsule).padding(.horizontal, 24).padding(.bottom, 12)
                 }
-                .sheet(isPresented: $settings) { SettingsView(model: model) }
+                .sheet(isPresented: $settings) { SettingsView(model: model, onLocate: requestLocation) }
                 .onChange(of: query) { _, _ in searchTask?.cancel(); searching = false; places = []; searchMessage = store.matches(query).isEmpty && !query.isEmpty ? t("没有匹配的预报区，可点搜索地名查找45km内的区域。", "一致する予報区はありません。地名検索で45km以内の予報区を探せます。") : "" }
                 .onDisappear { searchTask?.cancel() }
                 .task { for city in store.cities { if let value = await WeatherService.shared.cached(city.region) { cache[city.region.id] = value } } }
@@ -520,7 +523,7 @@ struct WeatherView: View {
             ForEach(store.cities) { city in
                 Group {
                     if pool.retainedIDs(cities: store.cities, selected: store.selectedID).contains(city.id) {
-                        RetainedCityPage(city: city, model: pool.model(for: city), active: store.selectedID == city.id) { store.select($0) }
+                        RetainedCityPage(city: city, model: pool.model(for: city), active: store.selectedID == city.id, locate: { model.locate(); store.select(CityPersistence.locationID) }) { store.select($0) }
                     } else { Color.clear }
                 }.tag(city.id)
             }
@@ -544,9 +547,10 @@ private struct RetainedCityPage: View {
     let city: SavedCity
     @ObservedObject var model: WeatherModel
     let active: Bool
+    let locate: () -> Void
     let select: (String) -> Void
     var body: some View {
-        WeatherPageContent(model: model, selectCity: select, cityID: city.id, isActive: active)
+        WeatherPageContent(model: model, selectCity: select, requestLocation: locate, cityID: city.id, isActive: active)
             .task(id: active) {
                 if active {
                     #if DEBUG

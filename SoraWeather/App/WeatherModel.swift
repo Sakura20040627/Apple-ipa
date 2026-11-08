@@ -16,11 +16,13 @@ import Combine
     @Published var locatedRegion: Region?
     @Published var region: Region
     private let location = CLLocationManager()
+    private let locationCoordinatorOnly: Bool
     private var generation = UUID()
     private var locating = false
     private var lastRefresh: Date?
     private var snapshots: [String: WeatherSnapshot] = [:]
-    init(initialRegion: Region? = nil) {
+    init(initialRegion: Region? = nil, locationCoordinatorOnly: Bool = false) {
+        self.locationCoordinatorOnly = locationCoordinatorOnly
         region = initialRegion ?? UserDefaults.standard.data(forKey: "selectedRegion.v1").flatMap { try? JSONDecoder().decode(Region.self, from: $0) } ?? .osaka
         super.init(); location.delegate = self; location.desiredAccuracy = kCLLocationAccuracyKilometer
     }
@@ -92,6 +94,7 @@ import Combine
             guard let nearest = CityStore.shared.nearby(latitude: lat, longitude: lon) else { notice = text("当前位置45km内没有支持的预报区，保留所选城市。", "45km以内に対応する予報区がありません。選択都市を維持します。"); return }
             locatedRegion = nearest
             notice = text("已定位至附近预报区：\(nearest.name)（非精确地址预报）", "最寄りの予報区：\(nearest.name)（地点の実況ではありません）")
+            if locationCoordinatorOnly { region = nearest; return }
             loading = false; await select(nearest)
         }
     }

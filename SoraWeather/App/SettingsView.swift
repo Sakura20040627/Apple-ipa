@@ -3,6 +3,7 @@ import UIKit
 
 struct SettingsView: View {
     @ObservedObject var model: WeatherModel
+    var onLocate: (() -> Void)? = nil
     private var language: String { AppLanguage.code }
     @AppStorage("rainEnabled") private var rainEnabled = false
     @AppStorage("autoLocation") private var autoLocation = true
@@ -20,7 +21,7 @@ struct SettingsView: View {
                         ForEach(Region.supported) { Text($0.name).tag($0.id) }
                     }
                     Toggle(t("启动时自动定位", "起動時に現在地を取得"), isOn: $autoLocation)
-                    Button(t("重新定位", "現在地を再取得")) { model.locate() }
+                    Button(t("重新定位", "現在地を再取得")) { if let onLocate { onLocate() } else { model.locate() } }
                 }
                 Section(t("普通天气提醒", "通常の天気通知")) {
                     Toggle(t("降雨提醒", "雨の通知"), isOn: $rainEnabled)
@@ -60,7 +61,7 @@ struct SettingsView: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(t("完成", "完了")) { dismiss() } } }
             .onChange(of: rainEnabled) { _, _ in Task { await model.updateReminders() } }
 
-            .onChange(of: autoLocation) { _, enabled in if enabled { model.locate() } }
+            .onChange(of: autoLocation) { _, enabled in if enabled { if let onLocate { onLocate() } else { model.locate() } } }
         }.presentationDetents([.large])
         .sheet(item: $webpage) { InternalBrowser(url: $0.url) }
         .environment(\.openURL, OpenURLAction { url in
