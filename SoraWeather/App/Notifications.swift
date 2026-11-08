@@ -75,6 +75,6 @@ import BackgroundTasks
         let key = defaults.string(forKey: "yahooClientID") ?? ""
         let points = (try? await WeatherService.shared.rain(region: region, clientID: key)) ?? []
         if Task.isCancelled || (defaults.string(forKey: "region") ?? "osaka") != region.id { return }
-        _ = await reconcile(region: region, snapshot: result.cached ? nil : result.weather, points: points, fetched: points.isEmpty ? nil : Date(), enabled: defaults.bool(forKey: "rainEnabled"), japanese: defaults.string(forKey: "language") == "ja")
+        _ = await reconcile(region: region, snapshot: result.cached ? nil : result.weather, points: points, fetched: points.isEmpty ? nil : Date(), enabled: defaults.bool(forKey: "rainEnabled"), japanese: AppLanguage.code == "ja")
     }
 }

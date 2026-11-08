@@ -99,3 +99,29 @@ public enum Condition {
         return "cloud.fill"
     }
 }
+
+public enum AppLanguage {
+    public static var code: String { Locale.preferredLanguages.first?.lowercased().hasPrefix("ja") == true ? "ja" : "zh-Hans" }
+}
+public enum WeatherMerge {
+    public static func combine(primary: WeatherSnapshot, supplement: WeatherSnapshot?) -> WeatherSnapshot {
+        guard let extra = supplement, extra.region == primary.region, !extra.stale(at: primary.fetched) else { return primary }
+        var days = primary.days
+        for day in extra.days {
+            if let i = days.firstIndex(where: { $0.id == day.id }) {
+                if days[i].high == nil { days[i].high = day.high }
+                if days[i].low == nil { days[i].low = day.low }
+                if days[i].probability == nil { days[i].probability = day.probability }
+                if days[i].condition.isEmpty { days[i].condition = day.condition }
+            } else { days.append(day) }
+        }
+        var slots = primary.slots
+        for slot in extra.slots {
+            if let i = slots.firstIndex(where: { $0.id == slot.id }) {
+                let base = slots[i]
+                slots[i] = ForecastSlot(date: base.date, temperature: base.temperature ?? slot.temperature, rainMM: base.rainMM ?? slot.rainMM, probability: base.probability ?? slot.probability, condition: base.condition.isEmpty ? slot.condition : base.condition, durationHours: base.durationHours)
+            } else { slots.append(slot) }
+        }
+        return WeatherSnapshot(region: primary.region, source: "JMA + Yahoo! JAPAN", issued: primary.issued, fetched: primary.fetched, days: days.sorted { $0.date < $1.date }, slots: slots.sorted { $0.date < $1.date })
+    }
+}

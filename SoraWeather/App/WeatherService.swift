@@ -25,26 +25,38 @@ actor WeatherService {
         return value
     }
     struct Result: Sendable { let weather: WeatherSnapshot?; let cached: Bool; let yahooFailed: Bool }
-    func refresh(_ region: Region) async -> Result {
+    func refresh(_ region: Region, publish: (@Sendable (WeatherSnapshot) async -> Void)? = nil) async -> Result {
         let now = Date()
-        if let last = refreshes[region.id], now.timeIntervalSince(last) < 300, let value = memory[region.id] { return Result(weather: value, cached: false, yahooFailed: value.source == "JMA") }
-        do {
-            let htmlData = try await data(region.yahooURL)
-            guard let html = String(data: htmlData, encoding: .utf8) else { throw SoraError.invalidData }
-            let forecast = try YahooParser.forecast(html, region: region, now: now)
-            guard !forecast.stale(at: now) else { throw SoraError.noForecast }
-            var slots: [ForecastSlot] = forecast.slots
-            if let pinData = try? await data(region.pinpointURL), let pin = String(data: pinData, encoding: .utf8), let (issued, parsed) = try? YahooParser.pinpoint(pin), abs(now.timeIntervalSince(issued)) <= 6*3600 { slots.append(contentsOf: parsed); slots.sort { $0.date < $1.date } }
-            let value = WeatherSnapshot(region: region, source: forecast.source, issued: forecast.issued, fetched: now, days: forecast.days, slots: slots)
-            save(value); return Result(weather: value, cached: false, yahooFailed: false)
-        } catch is CancellationError { return Result(weather: cached(region), cached: true, yahooFailed: false) }
-        catch {
-            do {
-                let value = try JMAParser.forecast(try await data(URL(string: "https://www.jma.go.jp/bosai/forecast/data/forecast/\(region.office).json")!), region: region, now: now)
-                guard !value.stale(at: now) else { throw SoraError.noForecast }
-                save(value); return Result(weather: value, cached: false, yahooFailed: true)
-            } catch { return Result(weather: cached(region), cached: true, yahooFailed: true) }
+        if let last = refreshes[region.id], now.timeIntervalSince(last) < 300, let value = memory[region.id] {
+            return Result(weather: value, cached: false, yahooFailed: UserDefaults.standard.bool(forKey: "yahooUnavailable." + region.id))
         }
+        async let primaryResult = loadJMA(region, now: now)
+        async let supplementResult = loadYahoo(region, now: now)
+        let primary = await primaryResult
+        if let primary { save(primary); await publish?(primary) }
+        let supplement = await supplementResult
+        let unavailable = supplement == nil
+        UserDefaults.standard.set(unavailable, forKey: "yahooUnavailable." + region.id)
+        guard let primary else {
+            // Retain the last successful primary snapshot; never replace it with an empty response.
+            return Result(weather: cached(region), cached: true, yahooFailed: unavailable)
+        }
+        let value = WeatherMerge.combine(primary: primary, supplement: supplement)
+        save(value)
+        return Result(weather: value, cached: false, yahooFailed: unavailable)
+    }
+    private func loadJMA(_ region: Region, now: Date) async -> WeatherSnapshot? {
+        guard let bytes = try? await data(URL(string: "https://www.jma.go.jp/bosai/forecast/data/forecast/\(region.office).json")!),
+              let value = try? JMAParser.forecast(bytes, region: region, now: now), !value.days.isEmpty else { return nil }
+        return value.stale(at: now) ? nil : value
+    }
+    private func loadYahoo(_ region: Region, now: Date) async -> WeatherSnapshot? {
+        var forecast: WeatherSnapshot?
+        var slots: [ForecastSlot] = []
+        if let bytes = try? await data(region.yahooURL), let html = String(data: bytes, encoding: .utf8), let value = YahooParser.resilientForecast(html, region: region, now: now), !value.stale(at: now) { forecast = value }
+        if let bytes = try? await data(region.pinpointURL), let html = String(data: bytes, encoding: .utf8), let (issued, values) = YahooParser.resilientPinpoint(html), now.timeIntervalSince(issued) >= -600, now.timeIntervalSince(issued) <= 6*3600 { slots = values }
+        guard forecast != nil || !slots.isEmpty else { return nil }
+        return WeatherSnapshot(region: region, source: "Yahoo! JAPAN", issued: forecast?.issued ?? now, fetched: now, days: forecast?.days ?? [], slots: slots.isEmpty ? (forecast?.slots ?? []) : slots)
     }
     private func save(_ value: WeatherSnapshot) {
         memory[value.region.id] = value; refreshes[value.region.id] = Date()

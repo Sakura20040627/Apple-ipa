@@ -2,7 +2,7 @@ import SwiftUI
 
 @main struct SoraWeatherApp: App {
     @StateObject private var model = WeatherModel()
-    @AppStorage("language") private var language = "zh-Hans"
+    private var language: String { AppLanguage.code }
     @AppStorage("autoLocation") private var autoLocation = true
     @Environment(\.scenePhase) private var phase
     init() { RainNotifications.shared.install() }

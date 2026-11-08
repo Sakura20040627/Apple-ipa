@@ -23,7 +23,7 @@ import Combine
         region = initialRegion ?? Region.supported.first { $0.id == UserDefaults.standard.string(forKey: "region") } ?? .osaka
         super.init(); location.delegate = self; location.desiredAccuracy = kCLLocationAccuracyKilometer
     }
-    var japanese: Bool { UserDefaults.standard.string(forKey: "language") == "ja" }
+    var japanese: Bool { AppLanguage.code == "ja" }
     func text(_ zh: String, _ ja: String) -> String { japanese ? ja : zh }
     func select(_ next: Region) async {
         guard next.id != region.id else { return }
@@ -41,7 +41,9 @@ import Combine
             guard token == generation else { return }
             weather = saved; cached = saved != nil
         }
-        async let result = WeatherService.shared.refresh(selected)
+        async let result = WeatherService.shared.refresh(selected) { [weak self] value in
+            await self?.publishPrimary(value, token: token)
+        }
         async let info = WeatherService.shared.safety(region: selected)
         let r = await result
         guard token == generation else { return }
@@ -57,6 +59,10 @@ import Combine
         let nextError = await RainNotifications.shared.reconcile(region: selected, snapshot: r.cached ? nil : r.weather, points: rain, fetched: rainFetched, enabled: UserDefaults.standard.bool(forKey: "rainEnabled") && (UserDefaults.standard.string(forKey: "region") ?? "osaka") == selected.id, japanese: japanese) ?? ""
         guard token == generation else { return }
         notificationError = nextError; loading = false; lastRefresh = Date()
+    }
+    private func publishPrimary(_ value: WeatherSnapshot, token: UUID) {
+        guard token == generation else { return }
+        weather = value; cached = false
     }
     func updateReminders() async {
         notificationAllowed = await RainNotifications.shared.permission()
