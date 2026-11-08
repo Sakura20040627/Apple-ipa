@@ -4,6 +4,7 @@ final class SoraWeatherUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-test-offline", "--ui-test-cities", "--ui-test-reset"]
         app.launch()
+        dismissLocationPrompt()
         XCTAssertTrue(app.buttons["openCities"].waitForExistence(timeout: 20))
         assertVisible(app.staticTexts["cityTitle.osaka"])
         swipeCity(app, left: true); assertVisible(app.staticTexts["cityTitle.tokyo"])
@@ -29,6 +30,16 @@ final class SoraWeatherUITests: XCTestCase {
         let start = app.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.85 : 0.15, dy: 0.25))
         let end = app.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.15 : 0.85, dy: 0.25))
         start.press(forDuration: 0.01, thenDragTo: end)
+    }
+    private func dismissLocationPrompt() {
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let alert = springboard.alerts.firstMatch
+        if alert.waitForExistence(timeout: 3) {
+            let deny = alert.buttons.matching(NSPredicate(format: "label IN %@", ["Don’t Allow", "Don't Allow", "不允许", "不允許", "許可しない"])).firstMatch
+            if deny.exists { deny.tap() }
+            let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: alert)
+            XCTAssertEqual(XCTWaiter.wait(for: [gone], timeout: 5), .completed)
+        }
     }
     private func assertVisible(_ element: XCUIElement) {
         let visible = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: element)
