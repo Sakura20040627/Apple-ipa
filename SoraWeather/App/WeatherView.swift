@@ -1,10 +1,14 @@
 import SwiftUI
+import Combine
 import MapKit
 import SafariServices
 
 struct WeatherPageContent: View {
     @ObservedObject var model: WeatherModel
-    var selectCity: ((Region) -> Void)? = nil
+    var selectCity: ((String) -> Void)? = nil
+    var cityID: String = CityPersistence.locationID
+    var isActive: Bool = true
+    @ObservedObject private var cityStore = CityStore.shared
     @State private var cities = false
     @State private var collapsed = false
     @State private var forecastMode = 0
@@ -30,9 +34,9 @@ struct WeatherPageContent: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                WeatherSky(night: night, condition: summary).ignoresSafeArea()
+                WeatherSky(night: night, condition: summary).equatable().ignoresSafeArea(.all)
                 ScrollView {
-                    VStack(spacing: 12) {
+                    LazyVStack(spacing: 12) {
                         hero.padding(.top, 42).padding(.bottom, 48)
                         forecastCard
                         daysCard
@@ -47,9 +51,9 @@ struct WeatherPageContent: View {
                             HStack { Label(t("气象与地震信息", "気象・地震情報"), systemImage: "exclamationmark.shield.fill"); Spacer() }.font(.subheadline)
                         }.tint(.white).padding(16).background(.black.opacity(night ? 0.16 : 0.08), in: RoundedRectangle(cornerRadius: 28))
                         footer.padding(.vertical, 13)
-                        Color.clear.frame(height: 78)
+
                     }.padding(.horizontal, 20).frame(maxWidth: 620).frame(maxWidth: .infinity)
-                }.scrollIndicators(.hidden).refreshable { await model.refresh() }
+                }.contentMargins(.bottom, 110, for: .scrollContent).scrollIndicators(.hidden).refreshable { await model.refresh() }
                 .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 220 } action: { _, value in collapsed = value }
                 .overlay(alignment: .top) {
                     if collapsed {
@@ -57,27 +61,17 @@ struct WeatherPageContent: View {
                     }
                 }
             }
+            .background { if isActive { WindowSkyBackground(color: SkyAppearance.colors(condition: summary, night: night)[0]).allowsHitTesting(false) } }
             .foregroundStyle(.white)
             .toolbar(.hidden, for: .navigationBar)
             .overlay(alignment: .bottom) { bottomBar }
-            .sheet(isPresented: $cities) { WeatherCities(model: model) }
-            .sheet(isPresented: $map) { InternalWeatherMap(region: model.region, temperature: current?.temperature, condition: summary) }
+            .fullScreenCover(isPresented: $cities) { WeatherCities(model: model, selectCity: selectCity) }
+            .fullScreenCover(isPresented: $map) { InternalWeatherMap(region: model.region, temperature: current?.temperature, condition: summary) }
             .sheet(isPresented: $settings) { SettingsView(model: model) }
             .sheet(item: $webpage) { InternalBrowser(url: $0.url) }
             .environment(\.openURL, OpenURLAction { url in webpage = InternalPage(url: url); return .handled })
 
         }.preferredColorScheme(.dark)
-    }
-    private var citySwipe: some Gesture {
-        DragGesture(minimumDistance: 25).onEnded { value in
-            guard abs(value.translation.width) > 65, abs(value.translation.width) > abs(value.translation.height)*1.6 else { return }
-            let regions = Region.supported
-            guard let index = regions.firstIndex(where: { $0.id == model.region.id }) else { return }
-            let next = index + (value.translation.width < 0 ? 1 : -1)
-            guard regions.indices.contains(next) else { return }
-            collapsed = false
-            Task { await model.select(regions[next]) }
-        }
     }
     private var hero: some View {
         VStack(spacing: 8) {
@@ -201,14 +195,18 @@ struct WeatherPageContent: View {
                 Spacer(minLength: 10)
                 HStack(spacing: 8) {
                     Button { model.locate() } label: { Image(systemName: "location.fill").font(.system(size: 11)).frame(width: 20, height: 42) }.accessibilityLabel(t("定位", "現在地"))
-                    ForEach(Region.supported) { region in
-                        Button { if let selectCity { selectCity(region) } else { Task { await model.select(region) } } } label: {
-                            Circle().fill(.white.opacity(region.id == model.region.id ? 1 : 0.35)).frame(width: 6, height: 6).frame(width: 12, height: 42)
-                        }.accessibilityLabel(region.name)
+                    if cityStore.cities.count > 6 {
+                        Text("\((cityStore.cities.firstIndex { $0.id == cityID } ?? 0) + 1)/\(cityStore.cities.count)").font(.caption.weight(.semibold)).monospacedDigit().accessibilityIdentifier("cityPageCounter")
+                    } else {
+                        ForEach(cityStore.cities) { city in
+                            Button { selectCity?(city.id) } label: {
+                                Circle().fill(.white.opacity(city.id == cityID ? 1 : 0.35)).frame(width: 6, height: 6).frame(width: 12, height: 42)
+                            }.accessibilityLabel(city.region.name)
+                        }
                     }
-                }.padding(.horizontal, 12).glassEffect(.regular, in: .capsule)
+                }.padding(.horizontal, 12).frame(minHeight: 42).glassEffect(.regular, in: .capsule)
                 Spacer(minLength: 10)
-                Button { cities = true } label: { Image(systemName: "list.bullet").font(.system(size: 24, weight: .medium)).frame(width: 50, height: 50) }.glassEffect(.regular, in: .circle).accessibilityLabel(t("城市列表", "都市一覧"))
+                Button { cities = true } label: { Image(systemName: "list.bullet").font(.system(size: 24, weight: .medium)).frame(width: 50, height: 50) }.glassEffect(.regular, in: .circle).accessibilityLabel(t("城市列表", "都市一覧")).accessibilityIdentifier("openCities")
             }
         }.padding(.horizontal, 24).padding(.bottom, 10).padding(.top, 8)
     }
@@ -304,86 +302,113 @@ private struct SoraCard: ViewModifier {
 }
 extension View { func soraCard() -> some View { modifier(SoraCard()) } }
 
-private struct WeatherSky: View {
+private struct WeatherSky: View, Equatable {
     let night: Bool
     let condition: String
-    private var cloudy: Bool { condition.contains("曇") || condition.contains("くもり") || condition.contains("雨") || condition.isEmpty }
     var body: some View {
         ZStack {
-            LinearGradient(colors: palette, startPoint: .top, endPoint: .bottom)
-            if night {
-                Canvas { context, size in
-                    for i in 0..<45 {
-                        let x = CGFloat((i*73+19)%997)/997*size.width
-                        let y = CGFloat((i*137+41)%769)/769*size.height*0.85
-                        let radius: CGFloat = i%7 == 0 ? 1 : 0.6
-                        context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: radius*2, height: radius*2)), with: .color(.white.opacity(cloudy ? 0.22 : 0.55)))
-                    }
-                }
-            }
-            if cloudy {
-                Canvas { context, size in
-                    for i in 0..<5 {
-                        let y = size.height*(0.12+Double(i)*0.19)
-                        context.fill(Path(ellipseIn: CGRect(x: -size.width*0.2, y: y, width: size.width*1.5, height: max(25,size.height*0.09))), with: .color(.white.opacity(night ? 0.035 : 0.065)))
-                    }
-                }
-            }
+            LinearGradient(colors: SkyAppearance.colors(condition: condition, night: night), startPoint: .top, endPoint: .bottom)
+            if night { Image(uiImage: SkyAppearance.stars).resizable().scaledToFill().clipped().opacity(condition.contains("雨") ? 0.4 : 1) }
         }.allowsHitTesting(false).accessibilityHidden(true)
-    }
-    private var palette: [Color] {
-        if night { return [Color(red: 0.025, green: 0.055, blue: 0.14), Color(red: 0.12, green: 0.22, blue: 0.36)] }
-        if condition.contains("雪") { return [Color(red: 0.51, green: 0.62, blue: 0.71), Color(red: 0.72, green: 0.77, blue: 0.81)] }
-        if cloudy { return [Color(red: 0.44, green: 0.53, blue: 0.62), Color(red: 0.59, green: 0.67, blue: 0.74)] }
-        return [Color(red: 0.06, green: 0.35, blue: 0.65), Color(red: 0.36, green: 0.64, blue: 0.83)]
     }
 }
 
 private struct WeatherCities: View {
     @ObservedObject var model: WeatherModel
+    var selectCity: ((String) -> Void)? = nil
+    @ObservedObject private var store = CityStore.shared
     @State private var settings = false
     @State private var query = ""
+    @State private var editMode: EditMode = .inactive
     @State private var cache: [String: WeatherSnapshot] = [:]
+    @State private var places: [Region] = []
+    @State private var searching = false
+    @State private var searchMessage = ""
+    @State private var searchTask: Task<Void, Never>?
     @Environment(\.dismiss) private var dismiss
     private var language: String { AppLanguage.code }
     private func t(_ zh: String, _ ja: String) -> String { language == "ja" ? ja : zh }
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(red: 0.24, green: 0.28, blue: 0.34).ignoresSafeArea()
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        HStack {
-                            Text(t("天气", "天気")).font(.system(size: 34, weight: .bold))
-                            Spacer()
-                            Button { settings = true } label: { Image(systemName: "ellipsis").font(.title2.weight(.bold)).frame(width: 46, height: 46) }.glassEffect(.regular, in: .circle).accessibilityLabel(t("设置", "設定"))
-                        }.padding(.bottom, 8)
-                        ForEach(Region.supported.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }) { region in
-                            Button { Task { await model.select(region) }; dismiss() } label: {
-                                CitySummaryCard(region: region, weather: region.id == model.region.id ? model.weather : cache[region.id], isLocation: region.id == model.region.id && (model.notice.contains("定位至") || model.notice.contains("最寄り")))
-                            }.buttonStyle(.plain)
+                Color(red: 0.24, green: 0.28, blue: 0.34).ignoresSafeArea(.all)
+                VStack(spacing: 0) {
+                    HStack {
+                        Text(t("天气", "天気")).font(.system(size: 34, weight: .bold))
+                        Spacer()
+                        if editMode.isEditing { Button(t("完成", "完了")) { editMode = .inactive }.accessibilityIdentifier("finishEditingCities") }
+                        Menu {
+                            Button(t("编辑", "編集")) { editMode = .active }
+                            Button(t("设置", "設定")) { settings = true }
+                        } label: { Image(systemName: "ellipsis").font(.title2.weight(.bold)).frame(width: 46, height: 46) }.glassEffect(.regular, in: .circle).accessibilityIdentifier("cityMenu")
+                    }.padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 8)
+                    List {
+                        if query.trimmingCharacters(in: .whitespaces).isEmpty {
+                            ForEach(store.cities) { city in
+                                Button { choose(city.id) } label: {
+                                    CitySummaryCard(region: city.region, weather: city.region.id == model.region.id ? (model.weather ?? cache[city.region.id]) : cache[city.region.id], isLocation: city.isLocation)
+                                }.buttonStyle(.plain).deleteDisabled(city.isLocation).moveDisabled(city.isLocation)
+                                    .accessibilityIdentifier("cityRow." + city.region.id)
+                            }.onDelete(perform: store.remove).onMove(perform: store.move)
+                        } else {
+                            Section(t("JMA 预报区", "JMA予報区")) {
+                                ForEach(Array(store.matches(query).prefix(30))) { region in searchRow(region) }
+                            }
+                            if searching { ProgressView(t("搜索中", "検索中")) }
+                            if !places.isEmpty { Section(t("附近可用预报区", "最寄りの予報区")) { ForEach(places) { region in searchRow(region) } } }
+                            if !searchMessage.isEmpty { Text(searchMessage).font(.subheadline).foregroundStyle(.white.opacity(0.8)) }
+                            Button(t("搜索地名", "地名を検索")) { startSearch() }.accessibilityIdentifier("searchPlace")
                         }
-                        Color.clear.frame(height: 90)
-                    }.padding(.horizontal, 16).padding(.top, 12)
-                }.scrollIndicators(.hidden)
-            }.foregroundStyle(.white)
-                .toolbar(.hidden, for: .navigationBar)
+                    }.listStyle(.plain).scrollContentBackground(.hidden).environment(\.editMode, $editMode)
+                        .listRowSeparator(.hidden)
+                        .contentMargins(.bottom, 110, for: .scrollContent)
+                }
+            }.foregroundStyle(.white).toolbar(.hidden, for: .navigationBar)
                 .overlay(alignment: .bottom) {
                     HStack(spacing: 10) {
                         Image(systemName: "magnifyingglass").font(.title3.weight(.semibold))
-                        TextField(t("搜索城市", "都市を検索"), text: $query).font(.body).autocorrectionDisabled()
+                        TextField(t("搜索城市", "都市を検索"), text: $query).font(.body).autocorrectionDisabled().submitLabel(.search).onSubmit { startSearch() }.accessibilityIdentifier("citySearch")
                     }.padding(.horizontal, 19).frame(height: 52).glassEffect(.regular, in: .capsule).padding(.horizontal, 24).padding(.bottom, 12)
                 }
                 .sheet(isPresented: $settings) { SettingsView(model: model) }
-                .task {
-                    // Read existing snapshots only. Network fetch and merge policy are unchanged.
-                    for region in Region.supported {
-                        if let value = await WeatherService.shared.cached(region) { cache[region.id] = value }
-                    }
-                }
+                .onChange(of: query) { _, _ in searchTask?.cancel(); searching = false; places = []; searchMessage = store.matches(query).isEmpty && !query.isEmpty ? t("没有匹配的预报区，可点搜索地名查找45km内的区域。", "一致する予報区はありません。地名検索で45km以内の予報区を探せます。") : "" }
+                .onDisappear { searchTask?.cancel() }
+                .task { for city in store.cities { if let value = await WeatherService.shared.cached(city.region) { cache[city.region.id] = value } } }
         }.preferredColorScheme(.dark)
     }
+    private func choose(_ id: String) { store.select(id); selectCity?(id); dismiss() }
+    private func searchRow(_ region: Region) -> some View {
+        Button {
+            store.add(region); choose(store.selectedID)
+        } label: { HStack { VStack(alignment: .leading) { Text(region.name); Text("JMA · " + region.forecastArea).font(.caption).foregroundStyle(.secondary) }; Spacer(); Image(systemName: "plus.circle.fill") } }.accessibilityIdentifier("addCity." + region.id)
+    }
+    private func startSearch() {
+        let text = query.trimmingCharacters(in: .whitespacesAndNewlines); guard !text.isEmpty else { return }
+        searchTask?.cancel(); searching = true; places = []; searchMessage = ""
+        searchTask = Task { @MainActor in
+            let request = MKLocalSearch.Request(); request.naturalLanguageQuery = text
+            request.region = MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 36, longitude: 138), span: MKCoordinateSpan(latitudeDelta: 18, longitudeDelta: 18))
+            do {
+                let response = try await MKLocalSearch(request: request).start()
+                guard !Task.isCancelled, query.trimmingCharacters(in: .whitespacesAndNewlines) == text else { return }
+                var seen = Set<String>(); var matches: [Region] = []
+                for item in response.mapItems.prefix(20) {
+                    let point = item.placemark.coordinate
+                    guard let base = store.nearby(latitude: point.latitude, longitude: point.longitude) else { continue }
+                    let id = "place-\(base.office)-\(String(format: "%.3f-%.3f", point.latitude, point.longitude))"
+                    guard seen.insert(id).inserted else { continue }
+                    matches.append(Region(id: id, name: item.name ?? base.name, latitude: point.latitude, longitude: point.longitude, yahooPath: base.yahooPath, pinpoint: base.pinpoint, office: base.office, forecastArea: base.forecastArea, station: base.station))
+                }
+                places = matches
+                if matches.isEmpty { searchMessage = t("该地点45km内没有可用JMA预报区，请换一个城市名。", "45km以内に利用可能なJMA予報区がありません。別の地名をお試しください。") }
+            } catch {
+                if !Task.isCancelled { searchMessage = t("地名搜索暂不可用，请选择上方JMA预报区或稍后重试。", "地名検索を利用できません。上のJMA予報区を選ぶか、後でお試しください。") }
+            }
+            if !Task.isCancelled { searching = false }
+        }
+    }
 }
+
 private struct CitySummaryCard: View {
     let region: Region
     let weather: WeatherSnapshot?
@@ -452,7 +477,7 @@ private struct InternalWeatherMap: View {
                         Image(systemName: "arrowtriangle.down.fill").font(.system(size: 12)).foregroundStyle(Color(red: 0.4, green: 0.49, blue: 0.61)).offset(y: -2)
                     }.foregroundStyle(.white)
                 }
-            }.mapStyle(satellite ? .imagery(elevation: .flat) : .standard(elevation: .flat, emphasis: .muted)).ignoresSafeArea()
+            }.mapStyle(satellite ? .imagery(elevation: .flat) : .standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll)).ignoresSafeArea(.all)
             GlassEffectContainer(spacing: 18) {
                 HStack(alignment: .top) {
                     Button { dismiss() } label: { Image(systemName: "xmark").font(.title3.weight(.semibold)).frame(width: 46, height: 46) }.glassEffect(.regular, in: .circle).accessibilityLabel(japanese ? "閉じる" : "关闭")
@@ -487,36 +512,50 @@ private struct InternalWeatherMap: View {
 }
 struct WeatherView: View {
     @ObservedObject var model: WeatherModel
-    @State private var selected: String
-    init(model: WeatherModel) { self.model = model; _selected = State(initialValue: model.region.id) }
+    @ObservedObject private var store = CityStore.shared
+    @State private var pool = WeatherPagePool()
+    @Environment(\.scenePhase) private var phase
     var body: some View {
-        TabView(selection: $selected) {
-            ForEach(Region.supported) { region in
-                CityWeatherPage(region: region, active: selected == region.id) { selected = $0.id }.tag(region.id)
+        TabView(selection: Binding(get: { store.selectedID }, set: { store.select($0) })) {
+            ForEach(store.cities) { city in
+                Group {
+                    if pool.retainedIDs(cities: store.cities, selected: store.selectedID).contains(city.id) {
+                        RetainedCityPage(city: city, model: pool.model(for: city), active: store.selectedID == city.id) { store.select($0) }
+                    } else { Color.clear }
+                }.tag(city.id)
             }
         }.tabViewStyle(.page(indexDisplayMode: .never))
-            .onChange(of: selected) { _, id in
-                UserDefaults.standard.set(id, forKey: "region")
-                if let region = Region.supported.first(where: { $0.id == id }) { Task { await model.select(region) } }
-            }
-            .onChange(of: model.region.id) { _, id in if selected != id { selected = id } }
+            .background(Color("LaunchBackground").ignoresSafeArea(.all))
+            .onAppear { store.select(store.selectedID); pool.prune(cities: store.cities, selected: store.selectedID) }
+            .onChange(of: store.selectedID) { _, _ in pool.prune(cities: store.cities, selected: store.selectedID) }
+            .onChange(of: store.cities) { _, _ in pool.prune(cities: store.cities, selected: store.selectedID) }
+            .onChange(of: model.locatedRegion) { _, region in if let region { store.updateRegion(region, for: CityPersistence.locationID) } }
+            .onChange(of: phase) { _, value in if value == .active { refreshSelected() } }
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SoraWeatherRefresh"))) { _ in refreshSelected() }
+    }
+    private func refreshSelected() {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-offline") { return }
+        #endif
+        let value = pool.model(for: store.selected); Task { await value.refresh(); await value.updateReminders() }
     }
 }
-private struct CityWeatherPage: View {
-    @StateObject private var model: WeatherModel
-    let region: Region
+private struct RetainedCityPage: View {
+    let city: SavedCity
+    @ObservedObject var model: WeatherModel
     let active: Bool
-    let select: (Region) -> Void
-    init(region: Region, active: Bool, select: @escaping (Region) -> Void) {
-        _model = StateObject(wrappedValue: WeatherModel(initialRegion: region)); self.region = region; self.active = active; self.select = select
-    }
+    let select: (String) -> Void
     var body: some View {
-        WeatherPageContent(model: model, selectCity: select)
+        WeatherPageContent(model: model, selectCity: select, cityID: city.id, isActive: active)
             .task(id: active) {
                 if active {
-                    if model.region.id != region.id { await model.select(region) } else { await model.refresh() }
+                    #if DEBUG
+                    if ProcessInfo.processInfo.arguments.contains("--ui-test-offline") { return }
+                    #endif
+                    await model.refresh()
                 }
             }
-            .onChange(of: model.region.id) { _, _ in if active { select(model.region) } }
+            .onChange(of: model.locatedRegion) { _, region in if let region { CityStore.shared.updateRegion(region, for: CityPersistence.locationID) } }
+            .onChange(of: model.region.id) { _, _ in if active { CityStore.shared.updateRegion(model.region, for: city.id) } }
     }
 }

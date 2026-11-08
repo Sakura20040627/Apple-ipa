@@ -54,6 +54,8 @@ struct SettingsView: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Color("LaunchBackground").ignoresSafeArea(.all))
             .navigationTitle(t("设置", "設定"))
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(t("完成", "完了")) { dismiss() } } }
             .onChange(of: rainEnabled) { _, _ in Task { await model.updateReminders() } }

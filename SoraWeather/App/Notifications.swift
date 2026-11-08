@@ -69,7 +69,7 @@ import BackgroundTasks
         defer { scheduleBackground() }
         let defaults = UserDefaults.standard
         guard defaults.bool(forKey: "rainEnabled") else { await cancel(); return }
-        let region = Region.supported.first { $0.id == defaults.string(forKey: "region") } ?? .osaka
+        let region = defaults.data(forKey: "selectedRegion.v1").flatMap { try? JSONDecoder().decode(Region.self, from: $0) } ?? Region.supported.first { $0.id == defaults.string(forKey: "region") } ?? .osaka
         let result = await WeatherService.shared.refresh(region)
         if Task.isCancelled { return }
         let key = defaults.string(forKey: "yahooClientID") ?? ""

@@ -13,6 +13,7 @@ import Combine
     @Published var rain: [RainPoint] = []
     private var rainFetched: Date?
     @Published var notificationAllowed = false
+    @Published var locatedRegion: Region?
     @Published var region: Region
     private let location = CLLocationManager()
     private var generation = UUID()
@@ -20,7 +21,7 @@ import Combine
     private var lastRefresh: Date?
     private var snapshots: [String: WeatherSnapshot] = [:]
     init(initialRegion: Region? = nil) {
-        region = initialRegion ?? Region.supported.first { $0.id == UserDefaults.standard.string(forKey: "region") } ?? .osaka
+        region = initialRegion ?? UserDefaults.standard.data(forKey: "selectedRegion.v1").flatMap { try? JSONDecoder().decode(Region.self, from: $0) } ?? .osaka
         super.init(); location.delegate = self; location.desiredAccuracy = kCLLocationAccuracyKilometer
     }
     var japanese: Bool { AppLanguage.code == "ja" }
@@ -88,7 +89,8 @@ import Combine
         let lat = fix.coordinate.latitude; let lon = fix.coordinate.longitude
         Task { @MainActor in
             locating = false
-            guard let nearest = Region.nearest(latitude: lat, longitude: lon) else { notice = text("当前位置尚未覆盖，保留所选城市。可手动选择六个城市。", "現在地は対象外です。対応する6都市から選択できます。"); return }
+            guard let nearest = CityStore.shared.nearby(latitude: lat, longitude: lon) else { notice = text("当前位置45km内没有支持的预报区，保留所选城市。", "45km以内に対応する予報区がありません。選択都市を維持します。"); return }
+            locatedRegion = nearest
             notice = text("已定位至附近预报区：\(nearest.name)（非精确地址预报）", "最寄りの予報区：\(nearest.name)（地点の実況ではありません）")
             loading = false; await select(nearest)
         }

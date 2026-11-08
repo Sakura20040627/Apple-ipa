@@ -24,7 +24,7 @@ concurrency:
 jobs:
   verify-and-unsigned:
     runs-on: macos-26
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - name: Select installed Xcode 26
@@ -49,6 +49,25 @@ jobs:
         timeout-minutes: 8
         continue-on-error: true
         run: bash scripts/simulator_smoke.sh
+      - name: SwiftUI Instruments and UI regression
+        timeout-minutes: 12
+        continue-on-error: true
+        run: python3 scripts/profile_ui.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-evidence
+          path: |
+            SoraWeather/build/performance-summary.txt
+            SoraWeather/build/SwiftUI-toc.xml
+            SoraWeather/build/trace-*.xml
+            SoraWeather/build/ui-*.log
+            SoraWeather/build/instruments*.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Instruments-SwiftUI-trace
+          path: SoraWeather/build/SwiftUI.trace
       - uses: actions/upload-artifact@v4
         if: always()
         with:
