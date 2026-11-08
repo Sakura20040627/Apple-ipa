@@ -546,7 +546,7 @@ private struct RetainedCityPage: View {
 private struct NativeCityPager: UIViewControllerRepresentable {
     let ids: [String]
     let selected: String
-    @ObservedObject var backdropModel: WeatherModel
+    let backdropModel: WeatherModel
     let select: (String) -> Void
     let content: (String) -> AnyView
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -554,14 +554,14 @@ private struct NativeCityPager: UIViewControllerRepresentable {
         let page = SkyPageController(transitionStyle: .scroll, navigationOrientation: .horizontal)
         page.paint(backdropModel)
         page.view.clipsToBounds = true
-        for scroll in page.view.subviews.compactMap({ $0 as? UIScrollView }) { scroll.bounces = false; scroll.isScrollEnabled = ids.count > 1; scroll.backgroundColor = .clear }
+        for scroll in page.view.subviews.compactMap({ $0 as? UIScrollView }) { scroll.bounces = ids.count > 1; scroll.isScrollEnabled = ids.count > 1; scroll.backgroundColor = .clear }
         page.dataSource = context.coordinator; page.delegate = context.coordinator
         if ids.contains(selected) { page.setViewControllers([context.coordinator.controller(selected)], direction: .forward, animated: false) }
         return page
     }
     func updateUIViewController(_ page: UIPageViewController, context: Context) {
         (page as? SkyPageController)?.paint(backdropModel)
-        for scroll in page.view.subviews.compactMap({ $0 as? UIScrollView }) { scroll.bounces = false; scroll.isScrollEnabled = ids.count > 1; scroll.backgroundColor = .clear }
+        for scroll in page.view.subviews.compactMap({ $0 as? UIScrollView }) { scroll.bounces = ids.count > 1; scroll.isScrollEnabled = ids.count > 1; scroll.backgroundColor = .clear }
         let coordinator = context.coordinator
         let changedOrder = coordinator.parent.ids != ids
         coordinator.parent = self

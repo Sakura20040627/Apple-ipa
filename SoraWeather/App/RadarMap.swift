@@ -375,7 +375,7 @@ struct InternalWeatherMap: View {
                         Button { layers = true } label: { Image(systemName: "square.3.layers.3d").font(.title3).frame(width: 46, height: 48) }.accessibilityLabel(t("图层", "レイヤー"))
                         Divider().padding(.horizontal, 11)
                         Button { focus += 1 } label: { Image(systemName: "location").font(.title3).frame(width: 46, height: 48) }.accessibilityLabel(t("返回预报地点", "予報地点に戻る"))
-                    }.glassEffect(.regular, in: .capsule)
+                    }.frame(width: 46).glassEffect(.regular, in: .capsule)
                 }
             }.padding(.horizontal, 18).padding(.top, 12)
         }.preferredColorScheme(.dark).tint(.white)
@@ -427,7 +427,7 @@ struct InternalWeatherMap: View {
             }
             Slider(value: Binding(get: { Double(radar.index) }, set: { radar.playing = false; radar.index = min(max(0, Int($0.rounded())), radar.frames.count-1) }), in: 0...Double(max(1,radar.frames.count-1)), step: 1).tint(.white).disabled(radar.frames.count < 2).accessibilityIdentifier("rainTimeline")
             HStack { if let first = radar.frames.first { Text(first.date, style: .time) }; Spacer(); if let last = radar.frames.last { Text(last.date, style: .time) } }.font(.caption2).environment(\.timeZone, JapanTime.calendar.timeZone)
-        }.padding(16).glassEffect(.regular, in: RoundedRectangle(cornerRadius: 28)).foregroundStyle(.white).accessibilityIdentifier("rainPlayback")
+        }.padding(16).glassEffect(.regular, in: RoundedRectangle(cornerRadius: 28)).foregroundStyle(.white).accessibilityElement(children: .contain).accessibilityIdentifier("rainPlayback")
     }
     private func color(_ value: UInt32) -> Color { Color(red: Double((value >> 16)&255)/255, green: Double((value >> 8)&255)/255, blue: Double(value&255)/255) }
 }

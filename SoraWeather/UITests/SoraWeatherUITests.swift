@@ -97,8 +97,8 @@ final class SoraWeatherUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [correct], timeout: 10), .completed)
     }
     private func swipeCity(_ app: XCUIApplication, left: Bool) {
-        let start = app.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.85 : 0.15, dy: 0.25))
-        let end = app.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.15 : 0.85, dy: 0.25))
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.85 : 0.15, dy: 0.34))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.15 : 0.85, dy: 0.34))
         start.press(forDuration: 0.01, thenDragTo: end)
     }
     private func dismissLocationPrompt() {
