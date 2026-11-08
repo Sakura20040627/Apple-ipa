@@ -17,7 +17,7 @@ log=(build/'instruments.log').open('w')
 record=subprocess.Popen(['xcrun','xctrace','record','--template','SwiftUI','--device',device,'--all-processes','--time-limit','90s','--output',str(trace),'--no-prompt'],stdout=log,stderr=subprocess.STDOUT)
 try:
  with (build/'ui-tests.log').open('w') as tests:
-  result=run(base+['test-without-building','-only-testing:SoraWeatherUITests','-resultBundlePath','build/UIRegression.xcresult'],stdout=tests,stderr=subprocess.STDOUT,timeout=240)
+  result=run(base+['test-without-building','-only-testing:SoraWeatherUITests','-resultBundlePath','build/UIRegression.xcresult'],stdout=tests,stderr=subprocess.STDOUT,timeout=360)
  ui_code=result.returncode
  report.append('UI regression exit code: '+str(ui_code))
 except subprocess.TimeoutExpired:report.append('UI regression timed out')
@@ -48,4 +48,8 @@ report.append('Environment: GitHub macOS runner / iOS simulator. No physical Pro
 (build/'performance-summary.txt').write_text('\n'.join(report)+'\n');print('\n'.join(report))
 
 # UI failures must fail CI. Unsupported simulator profiling is reported separately.
+if (build/'UIRegression.xcresult').exists():
+ run(['xcrun','xcresulttool','export','attachments','--path','build/UIRegression.xcresult','--output-path','build/ui-attachments'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 sys.exit(ui_code)
+
+# Keep screenshots attached by UI regression tests for visual verification.

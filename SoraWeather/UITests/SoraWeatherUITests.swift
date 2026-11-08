@@ -42,6 +42,38 @@ final class SoraWeatherUITests: XCTestCase {
         assertVisible(app.staticTexts["cityTitle.tokyo"])
         assertScope(app, region: "tokyo")
     }
+    func testCityDismissalAstronomyWarningsAndRadarFailure() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-reset", "--ui-test-offline", "--ui-test-warning", "--ui-test-radar-fail"]
+        app.launch(); dismissLocationPrompt()
+        assertVisible(app.staticTexts["cityTitle.osaka"])
+        let start = app.staticTexts["cityTitle.osaka"].frame
+        swipeCity(app, left: false)
+        XCTAssertEqual(app.staticTexts["cityTitle.osaka"].frame.minX, start.minX, accuracy: 1)
+        let edge = XCTAttachment(screenshot: app.screenshot()); edge.name = "single-city-no-black-edge"; edge.lifetime = .keepAlways; add(edge)
+        XCTAssertTrue(app.buttons["warningBanner"].waitForExistence(timeout: 10))
+        app.buttons["warningBanner"].tap()
+        XCTAssertTrue(app.buttons["closeWarningDetails"].waitForExistence(timeout: 10)); app.buttons["closeWarningDetails"].tap()
+        app.swipeUp()
+        XCTAssertTrue(app.descendants(matching: .any)["astronomyCard"].waitForExistence(timeout: 10))
+        try openCities(app)
+        XCTAssertTrue(app.textFields["citySearch"].waitForExistence(timeout: 10))
+        let list = XCTAttachment(screenshot: app.screenshot()); list.name = "unified-city-search"; list.lifetime = .keepAlways; add(list)
+        let top = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.18))
+        top.press(forDuration: 0.01, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.92)))
+        let closed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.textFields["citySearch"])
+        XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 10), .completed)
+        XCTAssertTrue(app.buttons["openMap"].waitForExistence(timeout: 10)); app.buttons["openMap"].tap()
+        let failed = app.staticTexts["testRadarState"]
+        XCTAssertTrue(failed.waitForExistence(timeout: 15))
+        let fallback = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == 'unavailable'"), object: failed)
+        XCTAssertEqual(XCTWaiter.wait(for: [fallback], timeout: 20), .completed)
+        XCTAssertTrue(app.descendants(matching: .any)["temperatureBubble"].waitForExistence(timeout: 15))
+        XCTAssertFalse(app.descendants(matching: .any)["rainLegend"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["rainPlayback"].exists)
+        let map = XCTAttachment(screenshot: app.screenshot()); map.name = "radar-failure-retains-map-bubble"; map.lifetime = .keepAlways; add(map)
+        app.buttons["closeMap"].tap()
+    }
     private func assertScope(_ app: XCUIApplication, region: String) {
         let value = app.staticTexts["forecastLoadScope"]
         XCTAssertTrue(value.waitForExistence(timeout: 10))

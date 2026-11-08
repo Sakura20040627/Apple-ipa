@@ -3,6 +3,8 @@ import MapKit
 
 @MainActor final class CityStore: ObservableObject {
     static let shared = CityStore()
+    @Published private(set) var selectionFeedback = 0
+    @Published private(set) var mutationFeedback = 0
     @Published private(set) var cities: [SavedCity]
     @Published var selectedID: String { didSet { defaults.set(selectedID, forKey: "selectedCityID") } }
     @Published private(set) var catalog: [Region] = Region.supported
@@ -23,22 +25,23 @@ import MapKit
         }
     }
     var selected: SavedCity { cities.first { $0.id == selectedID } ?? cities[0] }
-    func select(_ id: String) {
+    func select(_ id: String, haptic: Bool = true) {
         guard let city = cities.first(where: { $0.id == id }) else { return }
-        selectedID = id
+        if selectedID != id { selectedID = id; if haptic { selectionFeedback += 1 } }
         defaults.set(city.region.id, forKey: "region")
         defaults.set(try? JSONEncoder().encode(city.region), forKey: "selectedRegion.v1")
     }
     func add(_ region: Region) {
         if let existing = cities.first(where: { !$0.isLocation && $0.region.id == region.id }) { select(existing.id); return }
         let item = SavedCity(id: UUID().uuidString, region: region)
-        cities.append(item); save(); select(item.id)
+        cities.append(item); save(); select(item.id, haptic: false); mutationFeedback += 1
     }
     func remove(_ offsets: IndexSet) {
         let ids = Set(offsets.compactMap { cities.indices.contains($0) && !cities[$0].isLocation ? cities[$0].id : nil })
+        guard !ids.isEmpty else { return }
         cities = CityPersistence.deleting(ids, from: cities)
-        if !cities.contains(where: { $0.id == selectedID }) { select(CityPersistence.locationID) }
-        save()
+        if !cities.contains(where: { $0.id == selectedID }) { select(CityPersistence.locationID, haptic: false) }
+        save(); mutationFeedback += 1
     }
     func move(_ offsets: IndexSet, to destination: Int) {
         let allowed = IndexSet(offsets.filter { cities.indices.contains($0) && !cities[$0].isLocation })

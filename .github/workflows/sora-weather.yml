@@ -70,6 +70,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          name: ui-screenshots
+          path: SoraWeather/build/ui-attachments
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
           name: verification-logs
           path: |
             SoraWeather/build/*.log

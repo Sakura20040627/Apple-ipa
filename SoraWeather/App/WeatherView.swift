@@ -20,6 +20,8 @@ struct WeatherPageContent: View {
     @State private var webpage: InternalPage?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showSafety = false
+    @State private var showWarning = false
+    @State private var refreshFeedback = 0
     private var language: String { AppLanguage.code }
     private func t(_ zh: String, _ ja: String) -> String { language == "ja" ? ja : zh }
     private var slots: [ForecastSlot] { model.weather?.slots.filter { $0.date.addingTimeInterval(Double($0.durationHours)*3600) > Date() && $0.date < Date().addingTimeInterval(24*3600) } ?? [] }
@@ -30,6 +32,12 @@ struct WeatherPageContent: View {
     private var summary: String { current?.condition ?? today?.condition ?? "" }
     private var days: [ForecastDay] { model.weather?.sevenDays(from: Date()) ?? [] }
     private var night: Bool { let h = JapanTime.calendar.component(.hour, from: Date()); return h < 6 || h >= 18 }
+    private var displayWarnings: [DisasterItem] {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-warning") { return [DisasterItem(id: "test-special", title: "JMA 大雨特別警報 · 発表", detail: "UI regression fixture", issued: Date())] }
+        #endif
+        return model.safety.warnings
+    }
     private var probabilities: [ForecastSlot] { slots.filter { $0.probability != nil } }
     private var minTemp: Double { days.compactMap(\.low).min() ?? 0 }
     private var maxTemp: Double { days.compactMap(\.high).max() ?? 30 }
@@ -41,6 +49,7 @@ struct WeatherPageContent: View {
                         hero.padding(.top, 42).padding(.bottom, 48)
                         forecastCard
                         daysCard
+                        if let value = LocalAstronomy.calculate(date: Date(), latitude: model.region.latitude, longitude: model.region.longitude) { AstronomyCard(value: value) }
                         DisclosureGroup(isExpanded: $showMap) {
                             Button(t("打开雨云地图", "雨雲マップを開く")) { map = true }.padding(.vertical, 12)
                             if !model.rain.isEmpty { rainCard }
@@ -54,7 +63,7 @@ struct WeatherPageContent: View {
                         footer.padding(.vertical, 13)
 
                     }.padding(.horizontal, 20).frame(maxWidth: 620).frame(maxWidth: .infinity)
-                }.contentMargins(.bottom, 110, for: .scrollContent).scrollIndicators(.hidden).refreshable { await model.refresh() }
+                }.contentMargins(.bottom, 110, for: .scrollContent).scrollIndicators(.hidden).refreshable { await model.refresh(); refreshFeedback += 1 }
                 .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 220 } action: { _, value in collapsed = value }
                 .overlay(alignment: .top) {
                     if collapsed {
@@ -66,16 +75,19 @@ struct WeatherPageContent: View {
             .foregroundStyle(.white)
             .toolbar(.hidden, for: .navigationBar)
             .overlay(alignment: .bottom) { bottomBar.frame(height: 68) }
-            .fullScreenCover(isPresented: $cities) { WeatherCities(model: model, selectCity: selectCity, requestLocation: requestLocation) }
+            .sheet(isPresented: $cities) { WeatherCities(model: model, selectCity: selectCity, requestLocation: requestLocation).presentationDetents([.large]).presentationDragIndicator(.visible).presentationCornerRadius(28) }
             .fullScreenCover(isPresented: $map) { InternalWeatherMap(region: model.region, temperature: current?.temperature, condition: summary) }
+            .sheet(isPresented: $showWarning) { WarningDetails(region: model.region, items: displayWarnings, fetched: model.safety.warningsFetched) }
             .sheet(isPresented: $settings) { SettingsView(model: model, onLocate: requestLocation) }
             .sheet(item: $webpage) { InternalBrowser(url: $0.url) }
             .environment(\.openURL, OpenURLAction { url in webpage = InternalPage(url: url); return .handled })
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(.dark).tint(.white)
+            .sensoryFeedback(.impact(weight: .light, intensity: 0.5), trigger: refreshFeedback)
     }
     private var hero: some View {
         VStack(spacing: 8) {
             Text(model.region.name).font(.system(size: 34, weight: .medium)).accessibilityIdentifier("cityTitle." + model.region.id)
+            if !displayWarnings.isEmpty { WarningBanner(items: displayWarnings) { showWarning = true }.padding(.vertical, 6) }
             Text(current?.temperature.map { degree($0) } ?? "—°").font(.system(size: 96, weight: .thin)).tracking(-3).padding(.leading, 10).contentTransition(.numericText())
             HStack(spacing: 18) { highLow(t("最高", "最高"), value: today?.high); highLow(t("最低", "最低"), value: today?.low) }
             Text(condition(summary)).font(.system(size: 21, weight: .semibold))
@@ -188,7 +200,7 @@ struct WeatherPageContent: View {
     private var bottomBar: some View {
         GlassEffectContainer(spacing: 22) {
             HStack {
-                Button { map = true } label: { Image(systemName: "map").font(.system(size: 24, weight: .medium)).frame(width: 50, height: 50) }.glassEffect(.regular, in: .circle).accessibilityLabel(t("地图", "マップ"))
+                Button { map = true } label: { Image(systemName: "map").font(.system(size: 24, weight: .medium)).frame(width: 50, height: 50) }.glassEffect(.regular, in: .circle).accessibilityLabel(t("地图", "マップ")).accessibilityIdentifier("openMap")
                 Spacer(minLength: 10)
                 HStack(spacing: 8) {
                     Button { if let requestLocation { requestLocation() } else { model.locate() } } label: { Image(systemName: "location.fill").font(.system(size: 11)).frame(width: 20, height: 42) }.accessibilityLabel(t("定位", "現在地"))
@@ -329,11 +341,12 @@ private struct WeatherCities: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(red: 0.24, green: 0.28, blue: 0.34).ignoresSafeArea(.all)
+                WeatherSky(night: JapanTime.calendar.component(.hour, from: Date()) < 6 || JapanTime.calendar.component(.hour, from: Date()) >= 18, condition: "").ignoresSafeArea(.all)
                 VStack(spacing: 0) {
                     HStack {
                         Text(t("天气", "天気")).font(.system(size: 34, weight: .bold))
                         Spacer()
+                        Button { dismiss() } label: { Image(systemName: "xmark").font(.system(size: 16, weight: .semibold)).frame(width: 40, height: 40) }.glassEffect(.regular, in: .circle).accessibilityIdentifier("closeCities")
                         if editMode.isEditing { Button(t("完成", "完了")) { editMode = .inactive }.accessibilityIdentifier("finishEditingCities") }
                         Menu {
                             Button(t("编辑", "編集")) { editMode = .active }
@@ -360,20 +373,21 @@ private struct WeatherCities: View {
                         }
                     }.listStyle(.plain).scrollContentBackground(.hidden).environment(\.editMode, $editMode)
                         .listRowSeparator(.hidden)
-                        .contentMargins(.bottom, 110, for: .scrollContent)
+                        .contentMargins(.bottom, 16, for: .scrollContent).scrollDismissesKeyboard(.interactively)
                 }
             }.foregroundStyle(.white).toolbar(.hidden, for: .navigationBar)
-                .overlay(alignment: .bottom) {
+                .safeAreaInset(edge: .bottom, spacing: 0) {
                     HStack(spacing: 10) {
                         Image(systemName: "magnifyingglass").font(.title3.weight(.semibold))
-                        TextField(t("搜索城市", "都市を検索"), text: $query).font(.body).autocorrectionDisabled().submitLabel(.search).onSubmit { startSearch() }.accessibilityIdentifier("citySearch")
-                    }.padding(.horizontal, 19).frame(height: 52).glassEffect(.regular, in: .capsule).padding(.horizontal, 24).padding(.bottom, 12)
+                        TextField(t("搜索城市", "都市を検索"), text: $query, prompt: Text(t("搜索城市", "都市を検索")).foregroundStyle(.white.opacity(0.55))).font(.system(size: 17)).autocorrectionDisabled().submitLabel(.search).onSubmit { startSearch() }.accessibilityIdentifier("citySearch")
+                    }.padding(.horizontal, 17).frame(height: 50).glassEffect(.regular, in: .capsule).padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 12)
                 }
                 .sheet(isPresented: $settings) { SettingsView(model: model, onLocate: requestLocation) }
                 .onChange(of: query) { _, _ in searchTask?.cancel(); searching = false; places = []; searchMessage = store.matches(query).isEmpty && !query.isEmpty ? t("没有匹配的预报区，可点搜索地名查找45km内的区域。", "一致する予報区はありません。地名検索で45km以内の予報区を探せます。") : "" }
                 .onDisappear { searchTask?.cancel() }
                 .task { for city in store.cities { if let value = await WeatherService.shared.cached(city.region) { cache[city.region.id] = value } } }
-        }.preferredColorScheme(.dark)
+        }.preferredColorScheme(.dark).tint(.white)
+            .sensoryFeedback(.impact(weight: .light, intensity: 0.6), trigger: store.mutationFeedback)
     }
     private func choose(_ id: String) { store.select(id); selectCity?(id); dismiss() }
     private func searchRow(_ region: Region) -> some View {
@@ -451,55 +465,6 @@ struct InternalBrowser: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> SFSafariViewController { SFSafariViewController(url: url) }
     func updateUIViewController(_ controller: SFSafariViewController, context: Context) {}
 }
-private struct InternalWeatherMap: View {
-    let region: Region
-    let temperature: Double?
-    let condition: String
-    @State private var camera: MapCameraPosition
-    @State private var satellite = false
-    @State private var layers = false
-    @Environment(\.dismiss) private var dismiss
-    init(region: Region, temperature: Double?, condition: String) {
-        self.region = region; self.temperature = temperature; self.condition = condition
-        _camera = State(initialValue: .region(MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: region.latitude, longitude: region.longitude), span: MKCoordinateSpan(latitudeDelta: 0.65, longitudeDelta: 0.65))))
-    }
-    private var japanese: Bool { AppLanguage.code == "ja" }
-    var body: some View {
-        ZStack(alignment: .top) {
-            Map(position: $camera) {
-                Annotation(region.name, coordinate: CLLocationCoordinate2D(latitude: region.latitude, longitude: region.longitude), anchor: .bottom) {
-                    VStack(spacing: 0) {
-                        VStack(spacing: 2) {
-                            Text(temperature.map { "\(Int($0))°" } ?? "—°").font(.system(size: 26, weight: .bold))
-                            Image(systemName: Condition.symbol(condition)).symbolRenderingMode(.multicolor).font(.title3)
-                        }.frame(width: 64, height: 64).background(Color(red: 0.4, green: 0.49, blue: 0.61), in: .circle).overlay(Circle().stroke(.black.opacity(0.8), lineWidth: 2))
-                        Image(systemName: "arrowtriangle.down.fill").font(.system(size: 12)).foregroundStyle(Color(red: 0.4, green: 0.49, blue: 0.61)).offset(y: -2)
-                    }.foregroundStyle(.white)
-                }
-            }.mapStyle(satellite ? .imagery(elevation: .flat) : .standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll)).ignoresSafeArea(.all)
-            GlassEffectContainer(spacing: 18) {
-                HStack(alignment: .top) {
-                    Button { dismiss() } label: { Image(systemName: "xmark").font(.title3.weight(.semibold)).frame(width: 46, height: 46) }.glassEffect(.regular, in: .circle).accessibilityLabel(japanese ? "閉じる" : "关闭")
-                    Spacer()
-                    VStack(spacing: 0) {
-                        Button { layers = true } label: { Image(systemName: "square.3.layers.3d").font(.title3).frame(width: 46, height: 48) }.accessibilityLabel(japanese ? "レイヤー" : "图层")
-                        Divider().padding(.horizontal, 11)
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.4)) { camera = .region(MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: region.latitude, longitude: region.longitude), span: MKCoordinateSpan(latitudeDelta: 0.65, longitudeDelta: 0.65))) }
-                        } label: { Image(systemName: "location").font(.title3).frame(width: 46, height: 48) }.accessibilityLabel(japanese ? "予報地点に戻る" : "返回预报地点")
-                    }.frame(width: 46).glassEffect(.regular, in: .capsule)
-                }
-            }.padding(.horizontal, 18).padding(.top, 12)
-            // No map-layer payload exists in the current model. Do not create a fake legend, rain overlay or playback timeline from point forecasts.
-        }.preferredColorScheme(.dark)
-            .confirmationDialog(japanese ? "地図の種類" : "地图图层", isPresented: $layers) {
-                Button(japanese ? "標準地図" : "标准地图") { satellite = false }
-                Button(japanese ? "衛星画像" : "卫星地图") { satellite = true }
-                Button(japanese ? "キャンセル" : "取消", role: .cancel) {}
-            }
-    }
-}
-
 @MainActor private enum WeatherDateStrings {
     static var formatters: [String: DateFormatter] = [:]
     static func string(_ date: Date, pattern: String, language: String) -> String {
@@ -516,13 +481,14 @@ struct WeatherView: View {
     @Environment(\.scenePhase) private var phase
     var body: some View {
         NavigationStack {
-            NativeCityPager(ids: store.cities.map(\.id), selected: store.selectedID, select: { store.select($0) }) { id in
+            NativeCityPager(ids: store.cities.map(\.id), selected: store.selectedID, backdropModel: pool.model(for: store.selected), select: { store.select($0) }) { id in
                 guard let city = store.cities.first(where: { $0.id == id }) else { return AnyView(Color.clear) }
                 return AnyView(RetainedCityPage(city: city, model: pool.model(for: city), active: store.selectedID == city.id, locate: { model.locate(); store.select(CityPersistence.locationID) }) { store.select($0) }.id(city.id))
             }.ignoresSafeArea(.all)
                 .toolbar(.hidden, for: .navigationBar)
         }.preferredColorScheme(.dark)
             .background(Color("LaunchBackground").ignoresSafeArea(.all))
+            .sensoryFeedback(.selection, trigger: store.selectionFeedback)
             .onAppear { store.select(store.selectedID); pool.prune(cities: store.cities, selected: store.selectedID) }
             .onChange(of: store.selectedID) { _, _ in pool.prune(cities: store.cities, selected: store.selectedID) }
             .onChange(of: store.cities) { _, _ in pool.prune(cities: store.cities, selected: store.selectedID) }
@@ -580,17 +546,22 @@ private struct RetainedCityPage: View {
 private struct NativeCityPager: UIViewControllerRepresentable {
     let ids: [String]
     let selected: String
+    @ObservedObject var backdropModel: WeatherModel
     let select: (String) -> Void
     let content: (String) -> AnyView
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     func makeUIViewController(context: Context) -> UIPageViewController {
-        let page = UIPageViewController(transitionStyle: .scroll, navigationOrientation: .horizontal)
-        page.view.backgroundColor = .clear
+        let page = SkyPageController(transitionStyle: .scroll, navigationOrientation: .horizontal)
+        page.paint(backdropModel)
+        page.view.clipsToBounds = true
+        for scroll in page.view.subviews.compactMap({ $0 as? UIScrollView }) { scroll.bounces = false; scroll.isScrollEnabled = ids.count > 1; scroll.backgroundColor = .clear }
         page.dataSource = context.coordinator; page.delegate = context.coordinator
         if ids.contains(selected) { page.setViewControllers([context.coordinator.controller(selected)], direction: .forward, animated: false) }
         return page
     }
     func updateUIViewController(_ page: UIPageViewController, context: Context) {
+        (page as? SkyPageController)?.paint(backdropModel)
+        for scroll in page.view.subviews.compactMap({ $0 as? UIScrollView }) { scroll.bounces = false; scroll.isScrollEnabled = ids.count > 1; scroll.backgroundColor = .clear }
         let coordinator = context.coordinator
         let changedOrder = coordinator.parent.ids != ids
         coordinator.parent = self
@@ -630,5 +601,28 @@ private struct NativeCityPager: UIViewControllerRepresentable {
             transitioning = false
             if completed, let visible = pageViewController.viewControllers?.first, let id = id(of: visible) { parent.select(id) }
         }
+    }
+}
+
+@MainActor private final class SkyPageController: UIPageViewController {
+    private let sky = CAGradientLayer()
+    private let stars = CALayer()
+    override func viewDidLoad() {
+        super.viewDidLoad(); view.layer.insertSublayer(sky, at: 0); view.layer.insertSublayer(stars, at: 1)
+        stars.contentsGravity = .resizeAspectFill; stars.masksToBounds = true
+    }
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        CATransaction.begin(); CATransaction.setDisableActions(true); sky.frame = view.bounds; stars.frame = view.bounds; CATransaction.commit()
+    }
+    func paint(_ model: WeatherModel) {
+        loadViewIfNeeded()
+        let now = Date(), hour = JapanTime.calendar.component(.hour, from: now), night = hour < 6 || hour >= 18
+        let condition = model.weather?.slots.first { $0.date <= now && $0.date.addingTimeInterval(Double($0.durationHours)*3600) > now && !$0.condition.isEmpty }?.condition ?? model.weather?.sevenDays(from: now).first?.condition ?? ""
+        let colors = SkyAppearance.colors(condition: condition, night: night).map { UIColor($0) }
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        sky.colors = colors.map(\.cgColor); stars.contents = night ? SkyAppearance.stars.cgImage : nil
+        stars.opacity = condition.contains("雨") ? 0.4 : 1; view.backgroundColor = colors[0]
+        CATransaction.commit()
     }
 }

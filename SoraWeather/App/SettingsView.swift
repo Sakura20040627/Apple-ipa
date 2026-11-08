@@ -40,6 +40,12 @@ struct SettingsView: View {
                         Form {
                             Text(UserDefaults.standard.object(forKey: "yahooUnavailable." + model.region.id) == nil ? t("补充数据等待更新", "補完データの更新待ち") : UserDefaults.standard.bool(forKey: "yahooUnavailable." + model.region.id) ? t("Yahoo 暂不可用，目前使用 JMA 数据", "Yahoo取得不可・JMAデータを使用中") : t("JMA 主数据 · Yahoo 补充可用", "JMAメイン・Yahoo補完データ利用可")).font(.caption).foregroundStyle(.secondary)
                             Text(t("预报可能延迟或缺失；离线时显示本机缓存。Yahoo 缺字段时跳过该字段，JMA 仍正常显示。当前公开来源通常提供 3 小时气温、6 小时降水概率；日预报最多显示从今天起 7 天，仅显示已提供的日期，不生成占位行、逐小时或体感数据。", "予報に遅延・欠落がある場合があります。オフライン時は端末キャッシュを表示します。Yahooの欠損項目は省略しJMAを表示します。公開データは通常3時間気温・6時間降水確率です。日別予報は今日から最大7日間で、配信された日付のみ表示します。空行・未提供の1時間値・体感温度は生成しません。"))
+                            Text(t("雨云出典：气象厅高分辨率降水临近预报。打开雨云地图会向 JMA 请求当前地图范围的缩放级别及瓦片坐标。Sora Weather 在苹果底图上叠加、重新配色并播放；不生成新的降水预测。瓦片接口可能变更或失效。", "雨雲の出典：気象庁の高解像度降水ナウキャスト。雨雲マップを開くと表示範囲のズームとタイル座標をJMAへ送ります。Sora WeatherがApple地図へ重畳・配色加工・再生し、新たな降水予測は生成しません。タイル経路は変更・停止される場合があります。"))
+                            Link(t("气象厅雨云原图", "気象庁の雨雲原図"), destination: URL(string: "https://www.jma.go.jp/bosai/nowc/")!)
+                            Text(t("日出日落与月相在本机按时间、经纬度近似计算，不联网；不考虑地形、海拔及当天折射差异，可能与精密历表相差数分钟。极昼、极夜或计算失败时隐藏卡片。", "日の出・日の入りと月相は時刻・緯度経度から端末内で近似計算し、通信しません。地形・標高・当日の屈折は考慮せず、精密な暦と数分ずれる場合があります。極昼・極夜や計算失敗時はカードを非表示にします。"))
+                            NavigationLink(t("开源许可", "オープンソースライセンス")) {
+                                ScrollView { Text((Bundle.main.url(forResource: "THIRD_PARTY_NOTICES", withExtension: "txt").flatMap { try? String(contentsOf: $0, encoding: .utf8) }) ?? "SunCalc · BSD-2-Clause").font(.caption).padding(20).textSelection(.enabled) }.navigationTitle(t("开源许可", "ライセンス"))
+                            }
                             Text(t("气温显示为来源提供的时段预报，不是实测。定位选择45km以内的受支持城市预报区。", "気温は配信元の時間帯予報で、実況値ではありません。現在地から45km以内の対応予報区を選択します。"))
                             Text(t("后台刷新和通知由 iOS 调度，可能延迟或缺失，不能保证准确起雨时间。", "バックグラウンド更新・通知はiOSが制御し遅延・欠落があります。降り始めの正確な通知は保証しません。"))
                 Section(t("紧急预警的区别", "緊急速報との違い")) {
