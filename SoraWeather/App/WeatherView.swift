@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import Combine
 import MapKit
 import SafariServices
@@ -33,7 +34,6 @@ struct WeatherPageContent: View {
     private var minTemp: Double { days.compactMap(\.low).min() ?? 0 }
     private var maxTemp: Double { days.compactMap(\.high).max() ?? 30 }
     var body: some View {
-        NavigationStack {
             ZStack {
                 WeatherSky(night: night, condition: summary).equatable().ignoresSafeArea(.all)
                 ScrollView {
@@ -65,14 +65,13 @@ struct WeatherPageContent: View {
             .background { if isActive { WindowSkyBackground(color: SkyAppearance.colors(condition: summary, night: night)[0]).allowsHitTesting(false) } }
             .foregroundStyle(.white)
             .toolbar(.hidden, for: .navigationBar)
-            .overlay(alignment: .bottom) { bottomBar }
+            .overlay(alignment: .bottom) { bottomBar.frame(height: 68) }
             .fullScreenCover(isPresented: $cities) { WeatherCities(model: model, selectCity: selectCity, requestLocation: requestLocation) }
             .fullScreenCover(isPresented: $map) { InternalWeatherMap(region: model.region, temperature: current?.temperature, condition: summary) }
             .sheet(isPresented: $settings) { SettingsView(model: model, onLocate: requestLocation) }
             .sheet(item: $webpage) { InternalBrowser(url: $0.url) }
             .environment(\.openURL, OpenURLAction { url in webpage = InternalPage(url: url); return .handled })
-
-        }.preferredColorScheme(.dark)
+            .preferredColorScheme(.dark)
     }
     private var hero: some View {
         VStack(spacing: 8) {
@@ -516,19 +515,13 @@ struct WeatherView: View {
     @State private var pool = WeatherPagePool()
     @Environment(\.scenePhase) private var phase
     var body: some View {
-        GeometryReader { geometry in
-        TabView(selection: Binding(get: { store.selectedID }, set: { store.select($0) })) {
-            ForEach(store.cities) { city in
-                Group {
-                    if pool.retainedIDs(cities: store.cities, selected: store.selectedID).contains(city.id) {
-                        RetainedCityPage(city: city, model: pool.model(for: city), active: store.selectedID == city.id, locate: { model.locate(); store.select(CityPersistence.locationID) }) { store.select($0) }
-                            .safeAreaPadding(EdgeInsets(top: geometry.safeAreaInsets.top, leading: geometry.safeAreaInsets.leading, bottom: geometry.safeAreaInsets.bottom, trailing: geometry.safeAreaInsets.trailing))
-                    } else { Color.clear }
-                }.tag(city.id)
-            }
-        }.tabViewStyle(.page(indexDisplayMode: .never))
-            .ignoresSafeArea(.all)
-        }
+        NavigationStack {
+            NativeCityPager(ids: store.cities.map(\.id), selected: store.selectedID, select: { store.select($0) }) { id in
+                guard let city = store.cities.first(where: { $0.id == id }) else { return AnyView(Color.clear) }
+                return AnyView(RetainedCityPage(city: city, model: pool.model(for: city), active: store.selectedID == city.id, locate: { model.locate(); store.select(CityPersistence.locationID) }) { store.select($0) }.id(city.id))
+            }.ignoresSafeArea(.all)
+                .toolbar(.hidden, for: .navigationBar)
+        }.preferredColorScheme(.dark)
             .background(Color("LaunchBackground").ignoresSafeArea(.all))
             .onAppear { store.select(store.selectedID); pool.prune(cities: store.cities, selected: store.selectedID) }
             .onChange(of: store.selectedID) { _, _ in pool.prune(cities: store.cities, selected: store.selectedID) }
@@ -562,5 +555,62 @@ private struct RetainedCityPage: View {
             }
             .onChange(of: model.locatedRegion) { _, region in if let region { CityStore.shared.updateRegion(region, for: CityPersistence.locationID) } }
             .onChange(of: model.region.id) { _, _ in if active { CityStore.shared.updateRegion(model.region, for: city.id) } }
+    }
+}
+
+// Stable UIKit page controllers avoid replacing the pager's children when the retained model set changes.
+private struct NativeCityPager: UIViewControllerRepresentable {
+    let ids: [String]
+    let selected: String
+    let select: (String) -> Void
+    let content: (String) -> AnyView
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+    func makeUIViewController(context: Context) -> UIPageViewController {
+        let page = UIPageViewController(transitionStyle: .scroll, navigationOrientation: .horizontal)
+        page.view.backgroundColor = .clear
+        page.dataSource = context.coordinator; page.delegate = context.coordinator
+        if ids.contains(selected) { page.setViewControllers([context.coordinator.controller(selected)], direction: .forward, animated: false) }
+        return page
+    }
+    func updateUIViewController(_ page: UIPageViewController, context: Context) {
+        let coordinator = context.coordinator
+        let changedOrder = coordinator.parent.ids != ids
+        coordinator.parent = self
+        for (id, host) in coordinator.hosts where ids.contains(id) { host.rootView = content(id) }
+        guard !coordinator.transitioning, ids.contains(selected) else { return }
+        let visible = page.viewControllers?.first.flatMap { coordinator.id(of: $0) }
+        if visible != selected || changedOrder {
+            let direction: UIPageViewController.NavigationDirection = (ids.firstIndex(of: selected) ?? 0) >= (visible.flatMap { ids.firstIndex(of: $0) } ?? 0) ? .forward : .reverse
+            page.setViewControllers([coordinator.controller(selected)], direction: direction, animated: false)
+        }
+        coordinator.trim()
+    }
+    final class Coordinator: NSObject, UIPageViewControllerDataSource, UIPageViewControllerDelegate {
+        var parent: NativeCityPager
+        var hosts: [String: UIHostingController<AnyView>] = [:]
+        var transitioning = false
+        init(_ parent: NativeCityPager) { self.parent = parent }
+        func id(of controller: UIViewController) -> String? { hosts.first { $0.value === controller }?.key }
+        func controller(_ id: String) -> UIHostingController<AnyView> {
+            if let host = hosts[id] { return host }
+            let host = UIHostingController(rootView: parent.content(id)); host.view.backgroundColor = .clear
+            hosts[id] = host; return host
+        }
+        func trim() {
+            guard let index = parent.ids.firstIndex(of: parent.selected) else { return }
+            let keep = Set(parent.ids.indices.filter { abs($0-index) <= 1 }.map { parent.ids[$0] })
+            hosts = hosts.filter { keep.contains($0.key) }
+        }
+        func neighbor(_ controller: UIViewController, offset: Int) -> UIViewController? {
+            guard let id = id(of: controller), let index = parent.ids.firstIndex(of: id), parent.ids.indices.contains(index+offset) else { return nil }
+            return self.controller(parent.ids[index+offset])
+        }
+        func pageViewController(_ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController) -> UIViewController? { neighbor(viewController, offset: -1) }
+        func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController? { neighbor(viewController, offset: 1) }
+        func pageViewController(_ pageViewController: UIPageViewController, willTransitionTo pendingViewControllers: [UIViewController]) { transitioning = true }
+        func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
+            transitioning = false
+            if completed, let visible = pageViewController.viewControllers?.first, let id = id(of: visible) { parent.select(id) }
+        }
     }
 }

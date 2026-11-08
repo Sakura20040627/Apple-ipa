@@ -43,7 +43,9 @@ final class SoraWeatherUITests: XCTestCase {
     }
     private func assertVisible(_ element: XCUIElement) {
         let visible = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: element)
-        XCTAssertEqual(XCTWaiter.wait(for: [visible], timeout: 10), .completed)
+        let result = XCTWaiter.wait(for: [visible], timeout: 10)
+        if result != .completed { print(XCUIApplication().debugDescription) }
+        XCTAssertEqual(result, .completed)
     }
     private func openCities(_ app: XCUIApplication) throws {
         let buttons = app.buttons.matching(identifier: "openCities").allElementsBoundByIndex
