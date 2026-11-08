@@ -58,6 +58,8 @@ final class SoraWeatherUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["astronomyCard"].waitForExistence(timeout: 10))
         try openCities(app)
         XCTAssertTrue(app.textFields["citySearch"].waitForExistence(timeout: 10))
+        assertVisible(app.staticTexts["cityListTitle"])
+        XCTAssertTrue(app.buttons["closeCities"].isHittable)
         let list = XCTAttachment(screenshot: app.screenshot()); list.name = "unified-city-search"; list.lifetime = .keepAlways; add(list)
         let top = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.18))
         top.press(forDuration: 0.01, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.92)))

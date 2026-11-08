@@ -334,9 +334,11 @@ private struct WeatherSky: View, Equatable {
     let night: Bool
     let condition: String
     var body: some View {
-        ZStack {
-            LinearGradient(colors: SkyAppearance.colors(condition: condition, night: night), startPoint: .top, endPoint: .bottom)
-            if night { Image(uiImage: SkyAppearance.stars).resizable().scaledToFill().clipped().opacity(condition.contains("雨") ? 0.4 : 1) }
+        GeometryReader { geometry in
+            ZStack {
+                LinearGradient(colors: SkyAppearance.colors(condition: condition, night: night), startPoint: .top, endPoint: .bottom)
+                if night { Image(uiImage: SkyAppearance.stars).resizable().scaledToFill().frame(width: geometry.size.width, height: geometry.size.height).clipped().opacity(condition.contains("雨") ? 0.4 : 1) }
+            }.frame(width: geometry.size.width, height: geometry.size.height)
         }.allowsHitTesting(false).accessibilityHidden(true)
     }
 }
@@ -363,7 +365,7 @@ private struct WeatherCities: View {
                 WeatherSky(night: JapanTime.calendar.component(.hour, from: Date()) < 6 || JapanTime.calendar.component(.hour, from: Date()) >= 18, condition: "").ignoresSafeArea(.all)
                 VStack(spacing: 0) {
                     HStack {
-                        Text(t("天气", "天気")).font(.system(size: 34, weight: .bold))
+                        Text(t("天气", "天気")).font(.system(size: 34, weight: .bold)).accessibilityIdentifier("cityListTitle")
                         Spacer()
                         Button { dismiss() } label: { Image(systemName: "xmark").font(.system(size: 16, weight: .semibold)).frame(width: 40, height: 40) }.glassEffect(.regular, in: .circle).accessibilityIdentifier("closeCities")
                         if editMode.isEditing { Button(t("完成", "完了")) { editMode = .inactive }.accessibilityIdentifier("finishEditingCities") }
