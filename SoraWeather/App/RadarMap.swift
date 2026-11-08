@@ -249,7 +249,16 @@ private struct RainMap: UIViewRepresentable {
             let y0 = max(0, min(count-1, Int(floor(rect.minY/side)))), y1 = max(0, min(count-1, Int(floor(rect.maxY/side))))
             guard x0 <= x1, y0 <= y1 else { return [] }
             let cx = (x0+x1)/2, cy = (y0+y1)/2
-            return Array((x0...x1).flatMap { x in (y0...y1).map { RadarTile(z: z, x: x, y: $0) } }.sorted { abs($0.x-cx)+abs($0.y-cy) < abs($1.x-cx)+abs($1.y-cy) }.prefix(24))
+            var values: [RadarTile] = []
+            for x in x0...x1 { for y in y0...y1 { values.append(RadarTile(z: z, x: x, y: y)) } }
+            values.sort { left, right in
+                let a = abs(left.x-cx) + abs(left.y-cy)
+                let b = abs(right.x-cx) + abs(right.y-cy)
+                if a != b { return a < b }
+                if left.x != right.x { return left.x < right.x }
+                return left.y < right.y
+            }
+            return Array(values.prefix(24))
         }
         func stop() { preparation?.cancel(); prefetch?.cancel(); link?.invalidate(); link = nil; generation = UUID() }
         func clear() {
