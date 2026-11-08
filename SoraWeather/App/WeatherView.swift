@@ -22,6 +22,9 @@ struct WeatherPageContent: View {
     @State private var showSafety = false
     @State private var showWarning = false
     @State private var refreshFeedback = 0
+    #if DEBUG
+    @State private var refreshTestState = "idle"
+    #endif
     private var language: String { AppLanguage.code }
     private func t(_ zh: String, _ ja: String) -> String { language == "ja" ? ja : zh }
     private var slots: [ForecastSlot] { model.weather?.slots.filter { $0.date.addingTimeInterval(Double($0.durationHours)*3600) > Date() && $0.date < Date().addingTimeInterval(24*3600) } ?? [] }
@@ -63,7 +66,7 @@ struct WeatherPageContent: View {
                         footer.padding(.vertical, 13)
 
                     }.padding(.horizontal, 20).frame(maxWidth: 620).frame(maxWidth: .infinity)
-                }.contentMargins(.bottom, 110, for: .scrollContent).scrollIndicators(.hidden).refreshable { await model.refresh(); refreshFeedback += 1 }
+                }.contentMargins(.bottom, 110, for: .scrollContent).scrollIndicators(.hidden).refreshable { await pullRefresh() }
                 .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 220 } action: { _, value in collapsed = value }
                 .overlay(alignment: .top) {
                     if collapsed {
@@ -83,6 +86,22 @@ struct WeatherPageContent: View {
             .environment(\.openURL, OpenURLAction { url in webpage = InternalPage(url: url); return .handled })
             .preferredColorScheme(.dark).tint(.white)
             .sensoryFeedback(.impact(weight: .light, intensity: 0.5), trigger: refreshFeedback)
+            .overlay(alignment: .topLeading) {
+                #if DEBUG
+                if ProcessInfo.processInfo.arguments.contains("--ui-test-manual-network") { Text(refreshTestState).font(.caption2).accessibilityIdentifier("pullRefreshState") }
+                #endif
+            }
+    }
+    private func pullRefresh() async {
+        #if DEBUG
+        refreshTestState = "loading"
+        defer { refreshTestState = "complete" }
+        // Keep the offline UI suite offline for manual refreshes too.
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-offline") && !ProcessInfo.processInfo.arguments.contains("--ui-test-manual-network") {
+            await Task.yield(); refreshFeedback += 1; return
+        }
+        #endif
+        await model.refresh(); refreshFeedback += 1
     }
     private var hero: some View {
         VStack(spacing: 8) {

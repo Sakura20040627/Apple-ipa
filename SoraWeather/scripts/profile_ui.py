@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Real xctrace capture; no synthetic FPS numbers. Simulator results are not device 120Hz validation."""
-import subprocess,json,pathlib,os,sys,xml.etree.ElementTree as ET
+import subprocess,json,pathlib,os,sys,time,threading,xml.etree.ElementTree as ET
 build=pathlib.Path('build');build.mkdir(exist_ok=True)
 def run(args,**kwargs):return subprocess.run(args,**kwargs)
 root=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','booted','--json']))
@@ -15,12 +15,27 @@ with (build/'instruments-templates.log').open('w') as log:run(['xcrun','xctrace'
 trace=build/'SwiftUI.trace';report=[];ui_code=1
 log=(build/'instruments.log').open('w')
 record=subprocess.Popen(['xcrun','xctrace','record','--template','SwiftUI','--device',device,'--all-processes','--time-limit','90s','--output',str(trace),'--no-prompt'],stdout=log,stderr=subprocess.STDOUT)
+stop_samples=threading.Event()
+def sample_stalled_ui():
+ # Collect an actual stack if XCTest stops producing progress, without inventing FPS.
+ index=0
+ while not stop_samples.wait(30):
+  tests=build/'ui-tests.log'
+  if not tests.exists() or time.time()-tests.stat().st_mtime < 20:continue
+  found=run(['pgrep','-x','SoraWeather'],capture_output=True,text=True)
+  for pid in found.stdout.split():
+   if not pid.isdigit():continue
+   index+=1
+   try:run(['sample',pid,'1','1','-file',str(build/('ui-hang-sample-'+str(index)+'.log'))],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=8)
+   except subprocess.TimeoutExpired:pass
+sampler=threading.Thread(target=sample_stalled_ui,daemon=True);sampler.start()
 try:
  with (build/'ui-tests.log').open('w') as tests:
   result=run(base+['test-without-building','-only-testing:SoraWeatherUITests','-resultBundlePath','build/UIRegression.xcresult'],stdout=tests,stderr=subprocess.STDOUT,timeout=480)
  ui_code=result.returncode
  report.append('UI regression exit code: '+str(ui_code))
 except subprocess.TimeoutExpired:report.append('UI regression timed out')
+finally:stop_samples.set();sampler.join(timeout=9)
 try: code=record.wait(timeout=150)
 except subprocess.TimeoutExpired:
  record.terminate()

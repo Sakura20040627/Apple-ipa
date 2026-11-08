@@ -90,6 +90,19 @@ final class SoraWeatherUITests: XCTestCase {
         XCTAssertTrue(playback.exists)
         app.buttons["closeMap"].tap()
     }
+    func testLivePullRefreshRemainsResponsive() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-reset", "--ui-test-offline", "--ui-test-manual-network"]
+        app.launch(); dismissLocationPrompt()
+        assertVisible(app.staticTexts["cityTitle.osaka"])
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
+        start.press(forDuration: 0.01, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)))
+        let complete = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == 'complete'"), object: app.staticTexts["pullRefreshState"])
+        XCTAssertEqual(XCTWaiter.wait(for: [complete], timeout: 100), .completed)
+        try openCities(app)
+        XCTAssertTrue(app.textFields["citySearch"].waitForExistence(timeout: 10))
+        app.buttons["closeCities"].tap()
+    }
     private func assertScope(_ app: XCUIApplication, region: String) {
         let value = app.staticTexts["forecastLoadScope"]
         XCTAssertTrue(value.waitForExistence(timeout: 10))
