@@ -26,6 +26,28 @@ final class SoraWeatherUITests: XCTestCase {
         XCTAssertTrue(app.buttons["cityRow.osaka"].exists)
         XCTAssertFalse(app.buttons["cityRow.tokyo"].exists)
     }
+    func testLocationChangeRestartsCurrentForecastTask() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-reset", "--ui-test-offline", "--ui-test-location-change"]
+        app.launch(); dismissLocationPrompt()
+        assertVisible(app.staticTexts["cityTitle.osaka"])
+        assertScope(app, region: "osaka")
+        XCTAssertTrue(app.buttons["testLocationTokyo"].waitForExistence(timeout: 10))
+        app.buttons["testLocationTokyo"].tap()
+        assertVisible(app.staticTexts["cityTitle.tokyo"])
+        assertScope(app, region: "tokyo")
+        app.terminate()
+        app.launchArguments = ["--ui-test-offline", "--ui-test-location-change"]
+        app.launch()
+        assertVisible(app.staticTexts["cityTitle.tokyo"])
+        assertScope(app, region: "tokyo")
+    }
+    private func assertScope(_ app: XCUIApplication, region: String) {
+        let value = app.staticTexts["forecastLoadScope"]
+        XCTAssertTrue(value.waitForExistence(timeout: 10))
+        let correct = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", region), object: value)
+        XCTAssertEqual(XCTWaiter.wait(for: [correct], timeout: 10), .completed)
+    }
     private func swipeCity(_ app: XCUIApplication, left: Bool) {
         let start = app.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.85 : 0.15, dy: 0.25))
         let end = app.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.15 : 0.85, dy: 0.25))

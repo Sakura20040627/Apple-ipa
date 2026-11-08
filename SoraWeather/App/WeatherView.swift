@@ -537,21 +537,39 @@ struct WeatherView: View {
         let value = pool.model(for: store.selected); Task { await value.refresh(); await value.updateReminders() }
     }
 }
+private struct PageRefreshIdentity: Equatable {
+    let active: Bool
+    let region: Region
+}
 private struct RetainedCityPage: View {
     let city: SavedCity
     @ObservedObject var model: WeatherModel
     let active: Bool
     let locate: () -> Void
     let select: (String) -> Void
+    #if DEBUG
+    @State private var refreshScope = "pending"
+    #endif
     var body: some View {
         WeatherPageContent(model: model, selectCity: select, requestLocation: locate, cityID: city.id, isActive: active)
-            .task(id: active) {
+            .task(id: PageRefreshIdentity(active: active, region: city.region)) {
                 if active {
                     #if DEBUG
+                    if ProcessInfo.processInfo.arguments.contains("--ui-test-location-change") { refreshScope = city.region.id }
                     if ProcessInfo.processInfo.arguments.contains("--ui-test-offline") { return }
                     #endif
                     await model.refresh()
                 }
+            }
+            .overlay(alignment: .topTrailing) {
+                #if DEBUG
+                if active && ProcessInfo.processInfo.arguments.contains("--ui-test-location-change") {
+                    VStack {
+                        Button("Simulate Tokyo") { CityStore.shared.updateRegion(Region.supported[1], for: CityPersistence.locationID) }.accessibilityIdentifier("testLocationTokyo")
+                        Text(refreshScope).accessibilityIdentifier("forecastLoadScope")
+                    }.font(.caption).padding(8).background(.black).padding(.top, 110)
+                }
+                #endif
             }
             .onChange(of: model.locatedRegion) { _, region in if let region { CityStore.shared.updateRegion(region, for: CityPersistence.locationID) } }
             .onChange(of: model.region.id) { _, _ in if active { CityStore.shared.updateRegion(model.region, for: city.id) } }
