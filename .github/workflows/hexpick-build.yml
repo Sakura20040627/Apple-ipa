@@ -1,0 +1,69 @@
+name: Build HexPick iOS
+on:
+  workflow_dispatch:
+  push:
+    branches: [hexpick-cloud-build]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-26-intel
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: HexPick
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract HexPick source
+        working-directory: .
+        run: |
+          unzip -q HexPick-source.zip
+          if [ -d HexPickOverrides ]; then cp -R HexPickOverrides/. HexPick/; fi
+      - name: Select installed Xcode with iOS 26 SDK
+        run: |
+          python3 scripts/select_xcode.py
+          xcodebuild -version
+          xcodebuild -showsdks
+      - name: Prepare tools
+        run: |
+          command -v xcodegen || brew install xcodegen
+          python3 scripts/validate_snapshot.py
+      - name: Core parser, recommendation and cache tests
+        run: swift test --parallel
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Build Release for physical iPhone
+        run: |
+          xcodebuild build -project HexPick.xcodeproj -scheme HexPick \
+            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath build/Release \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p build/package/Payload
+          ditto build/Release/Build/Products/Release-iphoneos/HexPick.app build/package/Payload/HexPick.app
+          test -f build/package/Payload/HexPick.app/HexPick
+          python3 -c 'from pathlib import Path; assert list(Path("build/package/Payload/HexPick.app").rglob("Seed/latest.json")), "Missing offline seed bundle"' 
+          cd build/package
+          zip -qry ../HexPick-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HexPick-unsigned-IPA
+          path: HexPick/build/HexPick-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
+      - name: Select available iOS simulator
+        run: python3 scripts/select_simulator.py >> "$GITHUB_ENV"
+      - name: Test on iOS simulator
+        run: |
+          xcodebuild test -project HexPick.xcodeproj -scheme HexPick \
+            -destination "id=$SIMULATOR_ID" -derivedDataPath build/Test \
+            -resultBundlePath build/TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: HexPick-test-results
+          path: HexPick/build/TestResults.xcresult
+          if-no-files-found: ignore
+          retention-days: 7
