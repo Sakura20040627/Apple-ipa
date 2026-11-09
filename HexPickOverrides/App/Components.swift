@@ -41,17 +41,25 @@ struct StatLabel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(value).font(.title3.weight(.semibold)).monospacedDigit()
-            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text(title).font(.caption).foregroundStyle(Theme.secondary)
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 struct RarityPicker: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
     @Binding var value: String
     var body: some View {
+        Group {
+            if typeSize.isAccessibilitySize { picker.pickerStyle(.menu) }
+            else { picker.pickerStyle(.segmented) }
+        }.frame(minHeight: 44)
+    }
+    private var picker: some View {
         Picker("稀有度", selection: $value) {
             Text("全部").tag(""); Text("白银").tag("silver")
             Text("黄金").tag("gold"); Text("棱彩").tag("prismatic")
-        }.pickerStyle(.segmented)
+        }
+
     }
 }
 struct BandPicker: View {

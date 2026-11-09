@@ -3,10 +3,25 @@ import HexPickCore
 import CryptoKit
 import ImageIO
 
+private actor IconDownloadGate {
+    static let shared = IconDownloadGate()
+    private var active = 0
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    func run(_ operation: @Sendable () async throws -> Data) async throws -> Data {
+        if active >= 4 { await withCheckedContinuation { waiters.append($0) } }
+        else { active += 1 }
+        defer {
+            if waiters.isEmpty { active -= 1 } else { waiters.removeFirst().resume() }
+        }
+        return try await operation()
+    }
+}
+
 /// Only cosmetic metadata is fetched here. Statistical data never passes through this service.
 actor AugmentIconCache {
     static let shared = AugmentIconCache()
     private static let base = URL(string: "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/zh_cn/")!
+    private static let imageBase = URL(string: "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/")!
     private let memory = NSCache<NSString, NSData>()
     private let directory: URL
     private var pending: [String: Task<Data, Error>] = [:]
@@ -51,6 +66,9 @@ actor AugmentIconCache {
         }
     }
     private static func download(_ url: URL, limit: Int) async throws -> Data {
+        try await IconDownloadGate.shared.run { try await fetch(url, limit: limit) }
+    }
+    private static func fetch(_ url: URL, limit: Int) async throws -> Data {
         var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 20)
         request.setValue("HexPick/1.1", forHTTPHeaderField: "User-Agent")
         let (bytes, response) = try await URLSession.shared.bytes(for: request)
@@ -108,7 +126,7 @@ actor AugmentIconCache {
             let prefix = "/lol-game-data/assets/"
             let path = row.augmentSmallIconPath.lowercased()
             guard path.hasPrefix(prefix), path.hasSuffix(".png"), !path.contains(".."), !path.contains("?"), !path.contains("#") else { throw Failure.invalidResponse }
-            let url = Self.base.appendingPathComponent(String(path.dropFirst(prefix.count)))
+            let url = Self.imageBase.appendingPathComponent(String(path.dropFirst(prefix.count)))
             let data = try await Self.download(url, limit: 2_000_000)
             // Validate and downsample before persisting; discard huge or malformed image payloads.
             guard let source = CGImageSourceCreateWithData(data as CFData, nil),

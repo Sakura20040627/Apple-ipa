@@ -21,14 +21,14 @@ struct SettingsView: View {
                     if let end = data.meta.window?.endExclusive { LabeledContent("样本截止（不含）", value: end) }
                     if !data.bands.isEmpty { BandPicker() }
                 }
-                Text(store.status).font(.footnote).foregroundStyle(.secondary)
-                if let error = store.error { Text(error).font(.footnote).foregroundStyle(.orange) }
+                Text(store.status).font(.footnote).foregroundStyle(Theme.secondary)
+                if let error = store.error { Text(error).font(.footnote).foregroundStyle(Theme.gold) }
                 Button { Task { await store.update() } } label: {
                     HStack { Text("手动检查更新"); Spacer(); if store.updating { ProgressView() } }
                 }.disabled(store.updating)
                 Button("清除下载缓存", role: .destructive) { showClear = true }.disabled(store.updating)
                 Text("清理后恢复内置真实快照，收藏和最近查看保留。数据随来源仓库更新，并非游戏补丁发布即刻更新。")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(Theme.secondary)
             }
             Section("关于") {
                 NavigationLink("关于 HexPick") { AboutView() }

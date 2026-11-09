@@ -35,8 +35,8 @@ struct HeroesView: View {
                         Text(data.manifest.snapshotAt).textSelection(.enabled)
                     }
                     Text(store.status)
-                    if let error = store.error { Text(error).foregroundStyle(.orange) }
-                }.font(.caption).foregroundStyle(.secondary)
+                    if let error = store.error { Text(error).foregroundStyle(Theme.gold) }
+                }.font(.caption).foregroundStyle(Theme.secondary)
                 BandPicker()
                 if !store.recent.isEmpty && search.isEmpty && !favoritesOnly {
                     VStack(alignment: .leading, spacing: 12) {
@@ -67,7 +67,7 @@ struct HeroesView: View {
                                 if let hero = store.heroes[id] {
                                     NavigationLink { HeroDetailView(heroID: id) } label: {
                                         HeroRow(id: id, hero: hero, favorite: store.favoriteHeroes.contains(id))
-                                    }.buttonStyle(.plain)
+                                    }.buttonStyle(.plain).accessibilityIdentifier("hero-\(id)")
                                         .contextMenu { Button(store.favoriteHeroes.contains(id) ? "取消收藏" : "收藏", systemImage: "star") { store.toggleHero(id) } }
                                 }
                             }
@@ -80,7 +80,7 @@ struct HeroesView: View {
                     }
                 }
                 Text("强度排序沿用数据源胜率排名，不额外编造强度分数。使用率指全部英雄出场中的占比。")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(Theme.secondary)
             }.padding(20)
         }
         .hexBackground()
@@ -158,7 +158,7 @@ struct HeroDetailView: View {
                     }.animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: ordering)
                     equipment
                     spells
-                    Text(statisticalNotice).font(.footnote).foregroundStyle(.secondary)
+                    Text(statisticalNotice).font(.footnote).foregroundStyle(Theme.secondary)
                 }.padding(20)
             } else { ContentUnavailableView("英雄暂无数据", systemImage: "person.crop.circle.badge.questionmark") }
         }
@@ -176,7 +176,7 @@ struct HeroDetailView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("装备参考 · 全体样本").font(.title2.bold())
                 Text("仅适用于下列海克斯的持有者。第一条装备记录为代理，不证明实际绑定目标，不是通用出装顺序。")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(Theme.secondary)
                 ForEach(table.keys.sorted(), id: \.self) { id in
                     if let reference = table[id] {
                         Text(store.augments[id]?.name ?? "海克斯 \(id)").font(.headline)
@@ -185,10 +185,10 @@ struct HeroDetailView: View {
                             HStack {
                                 Text(item.name); Spacer()
                                 if reference.showWinrate == true { Text(percent(item.games > 0 ? Double(item.wins) / Double(item.games) : nil)).monospacedDigit() }
-                                if reference.showSampleSize == true { Text("\(item.games) 局").foregroundStyle(.secondary) }
+                                if reference.showSampleSize == true { Text("\(item.games) 局").foregroundStyle(Theme.secondary) }
                             }.font(.subheadline)
                         }
-                        if let note = reference.note { Text("数据源注：\(note)").font(.caption).foregroundStyle(.secondary) }
+                        if let note = reference.note { Text("数据源注：\(note)").font(.caption).foregroundStyle(Theme.secondary) }
                     }
                 }
             }
@@ -198,11 +198,11 @@ struct HeroDetailView: View {
         if let table = store.dataset?.spells[heroID], !table.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 Text("召唤师技能 · 全体样本").font(.title2.bold())
-                Text("按使用次数列出前三组，非技能选择的因果效果。").font(.caption).foregroundStyle(.secondary)
+                Text("按使用次数列出前三组，非技能选择的因果效果。").font(.caption).foregroundStyle(Theme.secondary)
                 ForEach(table.keys.sorted { (table[$0]?.games ?? 0) > (table[$1]?.games ?? 0) }.prefix(3), id: \.self) { key in
                     if let stat = table[key] {
                         HStack { Text(spellNames(key)); Spacer(); VStack(alignment: .trailing) {
-                            Text(percent(stat.rate)); Text("\(stat.games.formatted()) 局").font(.caption).foregroundStyle(.secondary)
+                            Text(percent(stat.rate)); Text("\(stat.games.formatted()) 局").font(.caption).foregroundStyle(Theme.secondary)
                         } }.monospacedDigit()
                     }
                 }

@@ -23,12 +23,12 @@ struct CompareView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 Text("选对这一次。").font(.largeTitle.bold())
-                Text("先选英雄，再填入屏幕上的三个海克斯。").foregroundStyle(.secondary)
+                Text("先选英雄，再填入屏幕上的三个海克斯。").foregroundStyle(Theme.secondary)
                 Button { showHeroPicker = true } label: {
                     HStack {
                         if let hero = store.heroes[heroID] { HeroPortrait(id: heroID, name: hero.name, size: 48) }
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("当前英雄").font(.caption).foregroundStyle(.secondary)
+                            Text("当前英雄").font(.caption).foregroundStyle(Theme.secondary)
                             Text(store.heroes[heroID]?.name ?? "请选择英雄").font(.headline)
                         }
                         Spacer(); Image(systemName: "chevron.right").font(.caption)
@@ -53,13 +53,13 @@ struct CompareView: View {
                 }.font(.subheadline.weight(.medium)).padding(14).frame(maxWidth: .infinity).glassEffect()
                     .disabled(busy)
                 if busy { ProgressView("在本机识别中文名称…") }
-                if let error { Text(error).font(.footnote).foregroundStyle(.orange) }
+                if let error { Text(error).font(.footnote).foregroundStyle(Theme.gold) }
                 if !confirmed {
                     Label("截图结果需要逐项确认，当前不生成推荐", systemImage: "checkmark.shield").font(.footnote)
                     Button("确认或修改识别结果") { showReview = true }
                 }
                 if Set(slots.filter { !$0.isEmpty }).count != slots.filter({ !$0.isEmpty }).count {
-                    Text("三个候选不能重复，请修改。").font(.footnote).foregroundStyle(.orange)
+                    Text("三个候选不能重复，请修改。").font(.footnote).foregroundStyle(Theme.gold)
                 }
                 if canRank {
                     Text("本轮推荐").font(.title2.bold())
@@ -67,7 +67,7 @@ struct CompareView: View {
                         RecommendationCard(result: result, position: index + 1)
                     }
                 }
-                Text(statisticalNotice).font(.footnote).foregroundStyle(.secondary)
+                Text(statisticalNotice).font(.footnote).foregroundStyle(Theme.secondary)
                 NavigationLink("了解推荐算法") { AlgorithmView() }.font(.footnote)
             }.padding(20)
         }
@@ -172,14 +172,14 @@ struct OCRReviewView: View {
                 }
                 Section {
                     Text("OCR 置信度和名称相似度不是正确率。所有结果都需你核对；不会自动把模糊结果当作已识别成功。")
-                        .font(.footnote).foregroundStyle(.secondary)
+                        .font(.footnote).foregroundStyle(Theme.secondary)
                 }
                 if lines.isEmpty { Section { Text("未识别到文本，请手动选择三个海克斯。") } }
                 ForEach(lines) { line in
                     Section {
                         Text(line.text).textSelection(.enabled)
-                        Text("OCR 置信度 \(Int(line.confidence * 100))%").font(.caption).foregroundStyle(.secondary)
-                        if line.matches.isEmpty { Text("未找到可靠匹配").font(.caption).foregroundStyle(.orange) }
+                        Text("OCR 置信度 \(Int(line.confidence * 100))%").font(.caption).foregroundStyle(Theme.secondary)
+                        if line.matches.isEmpty { Text("未找到可靠匹配").font(.caption).foregroundStyle(Theme.gold) }
                         ForEach(line.matches) { match in
                             Button {
                                 slots[activeSlot] = match.id

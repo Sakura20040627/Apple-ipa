@@ -55,6 +55,7 @@ struct HexCard: ViewModifier {
                 RoundedRectangle(cornerRadius: Theme.Radius.card)
                     .fill(Theme.rarityGradient(rarity ?? ""))
             }
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
             .overlay(RoundedRectangle(cornerRadius: Theme.Radius.card)
                 .strokeBorder(rarity.map(Theme.rarityColor) ?? Theme.secondary.opacity(0.25), lineWidth: 1))
             .shadow(color: .black.opacity(0.06), radius: 10, y: 4)

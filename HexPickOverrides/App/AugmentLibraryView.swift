@@ -18,7 +18,7 @@ struct AugmentLibraryView: View {
             Section {
                 RarityPicker(value: $rarity)
                 Text("游戏图标按需加载；未匹配或离线时显示稀有度符号，点击重试按钮可重新加载。")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(Theme.secondary)
             }
             ForEach(Theme.rarityOrder + [""], id: \.self) { group in
                 let groupIDs = ids.filter { (store.augments[$0]?.rarity ?? "") == group }
@@ -76,7 +76,7 @@ struct AugmentDetailView: View {
                     AugmentIcon(id: augmentID, rarity: store.augments[augmentID]?.rarity ?? "", size: 80)
                     VStack(alignment: .leading, spacing: 5) {
                         Text(store.augments[augmentID]?.name ?? augmentID).font(.title.bold())
-                        Text(store.augments[augmentID]?.rarityLabel ?? "").foregroundStyle(.secondary)
+                        Text(store.augments[augmentID]?.rarityLabel ?? "").foregroundStyle(Theme.secondary)
                     }
                 }
                 BandPicker()
@@ -85,10 +85,10 @@ struct AugmentDetailView: View {
                         HStack(spacing: 24) { totalMetrics }
                         VStack(alignment: .leading, spacing: 16) { totalMetrics }
                     }.hexCard(rarity: store.augments[augmentID]?.rarity)
-                } else { Text("暂无足够数据").foregroundStyle(.secondary) }
+                } else { Text("暂无足够数据").foregroundStyle(Theme.secondary) }
                 Text("适配英雄").font(.title2.bold())
                 Text("按各英雄组合的保守评分排序。总体持有胜率不会替代英雄专属推荐。")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(Theme.secondary)
                 LazyVStack(spacing: 16) {
                     ForEach(Array(compatibleHeroes.prefix(20)), id: \.id) { row in
                         NavigationLink { HeroDetailView(heroID: row.id) } label: {
@@ -97,18 +97,18 @@ struct AugmentDetailView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(store.heroes[row.id]?.name ?? row.id)
                                     Text("\(row.result.stat?.games.formatted() ?? "0") 局\(row.result.stat?.uncertain == true ? " · 样本量不足" : "")")
-                                        .font(.caption).foregroundStyle(.secondary)
+                                        .font(.caption).foregroundStyle(Theme.secondary)
                                 }
                                 Spacer()
                                 VStack(alignment: .trailing, spacing: 4) {
                                     WinRateView(rate: row.result.stat?.rate, title: "组合胜率")
-                                    Text("平滑 \(percent(row.result.posterior))").font(.caption).foregroundStyle(.secondary)
+                                    Text("平滑 \(percent(row.result.posterior))").font(.caption).foregroundStyle(Theme.secondary)
                                 }
                             }.padding(12).background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 18))
                         }.buttonStyle(.plain)
                     }
                 }
-                Text(statisticalNotice).font(.footnote).foregroundStyle(.secondary)
+                Text(statisticalNotice).font(.footnote).foregroundStyle(Theme.secondary)
             }.padding(20)
         }
         .hexBackground()

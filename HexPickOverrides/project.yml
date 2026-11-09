@@ -1,0 +1,79 @@
+name: HexPick
+options:
+  bundleIdPrefix: dev.kaikou
+  deploymentTarget:
+    iOS: '26.0'
+  xcodeVersion: '26.0'
+packages:
+  HexPickCore:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: '6.0'
+    SWIFT_STRICT_CONCURRENCY: complete
+    IPHONEOS_DEPLOYMENT_TARGET: '26.0'
+    TARGETED_DEVICE_FAMILY: '1,2'
+    MARKETING_VERSION: '1.1.0'
+    CURRENT_PROJECT_VERSION: '2'
+targets:
+  HexPick:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+    dependencies:
+      - package: HexPickCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.kaikou.HexPick
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: App/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: HexPick
+        CFBundleShortVersionString: '1.1.0'
+        CFBundleVersion: '2'
+        LSRequiresIPhoneOS: true
+        UILaunchScreen: {}
+        NSCameraUsageDescription: 拍摄电脑屏幕，在本机识别海克斯名称。照片不会上传。
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        CFBundleDevelopmentRegion: zh_CN
+        CFBundleLocalizations: [zh_CN]
+  HexPickTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: Tests/HexPickCoreTests
+    dependencies:
+      - target: HexPick
+      - package: HexPickCore
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+  HexPickUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: UITests
+    dependencies:
+      - target: HexPick
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: HexPick
+schemes:
+  HexPick:
+    build:
+      targets:
+        HexPick: all
+        HexPickTests: [test]
+    test:
+      targets: [HexPickTests, HexPickUITests]
