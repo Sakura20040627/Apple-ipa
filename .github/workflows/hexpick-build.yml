@@ -29,7 +29,10 @@ jobs:
           command -v xcodegen || brew install xcodegen
           python3 scripts/validate_snapshot.py
       - name: Core parser, recommendation and cache tests
-        run: swift test --parallel
+        run: |
+          # The bundled lockfile was produced on Linux. macOS uses system CryptoKit.
+          rm -f Package.resolved
+          swift test --parallel
       - name: Generate Xcode project
         run: xcodegen generate
       - name: Build Release for physical iPhone

@@ -23,6 +23,7 @@ enum Theme {
     static let silver = adaptive(0x4B6079, 0xBDCDE3)
     static let prismatic = adaptive(0x7145AB, 0xD6B4FF)
     enum Space { static let small: CGFloat = 8; static let medium: CGFloat = 16; static let large: CGFloat = 24 }
+    enum Shadow { static let opacity = 0.06; static let radius: CGFloat = 10; static let offset: CGFloat = 4 }
     enum Radius { static let card: CGFloat = 24; static let small: CGFloat = 14 }
     enum TypeScale {
         static let title: Font = .largeTitle.bold()
@@ -42,8 +43,9 @@ enum Theme {
     }
     static func rarityGradient(_ rarity: String) -> LinearGradient {
         let c = rarityColor(rarity)
-        return LinearGradient(colors: [surface, c.opacity(0.10)], startPoint: .topLeading, endPoint: .bottomTrailing)
+        return LinearGradient(colors: rarity == "prismatic" ? [surface, c.opacity(0.10), blue.opacity(0.10)] : [surface, c.opacity(0.10)], startPoint: .topLeading, endPoint: .bottomTrailing)
     }
+    static func rarityGroup(_ rarity: String) -> String { rarityOrder.contains(rarity) ? rarity : "" }
     static let rarityOrder = ["silver", "gold", "prismatic"]
 }
 
@@ -58,7 +60,7 @@ struct HexCard: ViewModifier {
             .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
             .overlay(RoundedRectangle(cornerRadius: Theme.Radius.card)
                 .strokeBorder(rarity.map(Theme.rarityColor) ?? Theme.secondary.opacity(0.25), lineWidth: 1))
-            .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
+            .shadow(color: .black.opacity(Theme.Shadow.opacity), radius: Theme.Shadow.radius, y: Theme.Shadow.offset)
     }
 }
 extension View {

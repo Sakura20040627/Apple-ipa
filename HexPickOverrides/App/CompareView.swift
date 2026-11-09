@@ -41,15 +41,15 @@ struct CompareView: View {
                             HStack {
                                 AugmentIcon(id: slots[index], rarity: store.augments[slots[index]]?.rarity ?? "")
                                 Text(store.augments[slots[index]]?.name ?? "选择第 \(index + 1) 个海克斯")
-                                    .foregroundStyle(slots[index].isEmpty ? .secondary : .primary)
+                                    .foregroundStyle(slots[index].isEmpty ? Theme.secondary : Theme.text)
                                 Spacer(); Image(systemName: "chevron.right").font(.caption)
                             }.padding(14).frame(maxWidth: .infinity, minHeight: 44)
                         }.buttonStyle(.plain).background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 20))
                     }
                 }
                 HStack(spacing: 16) {
-                    PhotosPicker(selection: $selectedPhoto, matching: .images) { Label("导入截图", systemImage: "photo") }
-                    Button { Task { await openCamera() } } label: { Label("拍摄屏幕", systemImage: "camera") }
+                    PhotosPicker(selection: $selectedPhoto, matching: .images) { Label("导入截图", systemImage: "photo").frame(minWidth: 44, minHeight: 44) }
+                    Button { Task { await openCamera() } } label: { Label("拍摄屏幕", systemImage: "camera").frame(minWidth: 44, minHeight: 44) }
                 }.font(.subheadline.weight(.medium)).padding(14).frame(maxWidth: .infinity).glassEffect()
                     .disabled(busy)
                 if busy { ProgressView("在本机识别中文名称…") }

@@ -138,7 +138,7 @@ struct HeroDetailView: View {
                     LazyVStack(alignment: .leading, spacing: 14, pinnedViews: [.sectionHeaders]) {
                         ForEach(groups, id: \.self) { group in
                             Section {
-                                ForEach(results.filter { (store.augments[$0.id]?.rarity ?? "") == group }) { result in
+                                ForEach(results.filter { Theme.rarityGroup(store.augments[$0.id]?.rarity ?? "") == group }) { result in
                                     VStack(alignment: .leading, spacing: 6) {
                                         NavigationLink { AugmentDetailView(augmentID: result.id) } label: {
                                             RecommendationCard(result: result)
@@ -151,7 +151,7 @@ struct HeroDetailView: View {
                                 }
                             } header: {
                                 HStack { Text(Theme.rarityName(group)).font(.headline); Spacer()
-                                    Text("\(results.filter { (store.augments[$0.id]?.rarity ?? "") == group }.count) 项").font(.caption)
+                                    Text("\(results.filter { Theme.rarityGroup(store.augments[$0.id]?.rarity ?? "") == group }.count) 项").font(.caption)
                                 }.foregroundStyle(Theme.rarityColor(group)).padding(.vertical, 12).background(Theme.background)
                             }
                         }

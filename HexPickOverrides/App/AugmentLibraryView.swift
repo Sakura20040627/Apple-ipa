@@ -21,7 +21,7 @@ struct AugmentLibraryView: View {
                     .font(.caption).foregroundStyle(Theme.secondary)
             }
             ForEach(Theme.rarityOrder + [""], id: \.self) { group in
-                let groupIDs = ids.filter { (store.augments[$0]?.rarity ?? "") == group }
+                let groupIDs = ids.filter { Theme.rarityGroup(store.augments[$0]?.rarity ?? "") == group }
                 if !groupIDs.isEmpty {
                     Section(Theme.rarityName(group)) {
                         ForEach(groupIDs, id: \.self) { id in
