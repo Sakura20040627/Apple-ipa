@@ -48,13 +48,13 @@ final class ResilienceTests: XCTestCase {
         let value = WeatherSnapshot(region: .osaka, source: "JMA", issued: now, fetched: now, days: [ForecastDay(date: now, high: nil, low: nil, probability: nil, condition: "")], slots: [])
         XCTAssertTrue(value.days.isEmpty); XCTAssertTrue(value.sevenDays(from: now).isEmpty)
     }
-    func testJMAFiltersExtendedDatesAndIgnoresWindPayload() throws {
+    func testJMAFiltersExtendedDatesAndIgnoresUnsupportedFieldsPayload() throws {
         var root = try XCTUnwrap(JSONSerialization.jsonObject(with: data("jma-osaka", "json")) as? [[String: Any]])
         var series = try XCTUnwrap(root[1]["timeSeries"] as? [[String: Any]])
         var areas = try XCTUnwrap(series[0]["areas"] as? [[String: Any]])
         series[0]["timeDefines"] = (0..<10).map { "2026-11-\(String(format: "%02d", 8+$0))T00:00:00+09:00" }
         areas[0]["weatherCodes"] = Array(repeating: "101", count: 10)
-        areas[0]["winds"] = ["malformed": true]
+        areas[0]["unusedMetric"] = ["malformed": true]
         series[0]["areas"] = areas; root[1]["timeSeries"] = series
         let result = try JMAParser.forecast(JSONSerialization.data(withJSONObject: root), region: .osaka, now: now)
         XCTAssertEqual(result.days.count, 7); XCTAssertEqual(result.days.last?.id, "2026-11-14")
@@ -67,18 +67,18 @@ final class ResilienceTests: XCTestCase {
         XCTAssertEqual(merged.days.count, 7)
         XCTAssertTrue(merged.days.allSatisfy { ForecastRange.contains($0.date, from: now) })
     }
-    func testLegacyCacheDropsExtraDaysSlotsAndWindFields() throws {
+    func testLegacyCacheDropsExtraDaysSlotsAndUnsupportedFieldsFields() throws {
         let original = WeatherSnapshot(region: .osaka, source: "JMA", issued: now, fetched: now, days: [], slots: [])
         var root = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
         root["days"] = (0..<10).map { offset -> [String: Any] in
-            ["date": now.addingTimeInterval(Double(offset)*86400).timeIntervalSinceReferenceDate, "high": 20, "condition": "晴れ", "windSpeed": 99]
+            ["date": now.addingTimeInterval(Double(offset)*86400).timeIntervalSinceReferenceDate, "high": 20, "condition": "晴れ", "legacyMetric": 99]
         }
-        root["slots"] = [["date": now.addingTimeInterval(8*86400).timeIntervalSinceReferenceDate, "condition": "雨", "durationHours": 3, "windDirection": "N"]]
-        root["wind"] = ["speed": 99]
+        root["slots"] = [["date": now.addingTimeInterval(8*86400).timeIntervalSinceReferenceDate, "condition": "雨", "durationHours": 3, "legacyDirection": "N"]]
+        root["legacyMetricGroup"] = ["speed": 99]
         let decoded = try JSONDecoder().decode(WeatherSnapshot.self, from: JSONSerialization.data(withJSONObject: root))
         XCTAssertEqual(decoded.days.count, 7); XCTAssertTrue(decoded.slots.isEmpty)
         let rewritten = String(decoding: try JSONEncoder().encode(decoded), as: UTF8.self)
-        XCTAssertFalse(rewritten.contains("wind"))
+        XCTAssertFalse(rewritten.contains("legacyMetricGroup"))
         XCTAssertEqual(decoded.limited(to: now.addingTimeInterval(2*86400)).days.count, 5)
     }
     func testSevenDayBoundaryUsesJapanMidnight() {

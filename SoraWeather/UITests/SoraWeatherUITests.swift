@@ -42,56 +42,6 @@ final class SoraWeatherUITests: XCTestCase {
         assertVisible(app.staticTexts["cityTitle.tokyo"])
         assertScope(app, region: "tokyo")
     }
-    func testCityDismissalAstronomyWarningsAndRadarFailure() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-test-reset", "--ui-test-offline", "--ui-test-warning", "--ui-test-radar-fail"]
-        app.launch(); dismissLocationPrompt()
-        assertVisible(app.staticTexts["cityTitle.osaka"])
-        let start = app.staticTexts["cityTitle.osaka"].frame
-        swipeCity(app, left: false)
-        XCTAssertEqual(app.staticTexts["cityTitle.osaka"].frame.minX, start.minX, accuracy: 1)
-        let edge = XCTAttachment(screenshot: app.screenshot()); edge.name = "single-city-no-black-edge"; edge.lifetime = .keepAlways; add(edge)
-        XCTAssertTrue(app.buttons["warningBanner"].waitForExistence(timeout: 10))
-        app.buttons["warningBanner"].tap()
-        XCTAssertTrue(app.buttons["closeWarningDetails"].waitForExistence(timeout: 10)); app.buttons["closeWarningDetails"].tap()
-        app.swipeUp()
-        XCTAssertTrue(app.descendants(matching: .any)["astronomyCard"].waitForExistence(timeout: 10))
-        try openCities(app)
-        XCTAssertTrue(app.textFields["citySearch"].waitForExistence(timeout: 10))
-        assertVisible(app.staticTexts["cityListTitle"])
-        XCTAssertTrue(app.buttons["closeCities"].isHittable)
-        let list = XCTAttachment(screenshot: app.screenshot()); list.name = "unified-city-search"; list.lifetime = .keepAlways; add(list)
-        let top = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.18))
-        top.press(forDuration: 0.01, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.92)))
-        let closed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.textFields["citySearch"])
-        XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 10), .completed)
-        XCTAssertTrue(app.buttons["openMap"].waitForExistence(timeout: 10)); app.buttons["openMap"].tap()
-        let failed = app.staticTexts["testRadarState"]
-        XCTAssertTrue(failed.waitForExistence(timeout: 15))
-        let fallback = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == 'unavailable'"), object: failed)
-        XCTAssertEqual(XCTWaiter.wait(for: [fallback], timeout: 20), .completed)
-        XCTAssertTrue(app.descendants(matching: .any)["temperatureBubble"].waitForExistence(timeout: 15))
-        XCTAssertFalse(app.descendants(matching: .any)["rainLegend"].exists)
-        XCTAssertFalse(app.descendants(matching: .any)["rainPlayback"].exists)
-        let map = XCTAttachment(screenshot: app.screenshot()); map.name = "radar-failure-retains-map-bubble"; map.lifetime = .keepAlways; add(map)
-        app.buttons["closeMap"].tap()
-    }
-    func testLiveRadarPlayback() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-test-reset", "--ui-test-offline", "--ui-test-radar-live"]
-        app.launch(); dismissLocationPrompt()
-        XCTAssertTrue(app.buttons["openMap"].waitForExistence(timeout: 20)); app.buttons["openMap"].tap()
-        let playback = app.descendants(matching: .any)["rainPlayback"]
-        let available = playback.waitForExistence(timeout: 90)
-        let capture = XCTAttachment(screenshot: app.screenshot()); capture.name = available ? "live-jma-radar-playback" : "live-jma-radar-unavailable"; capture.lifetime = .keepAlways; add(capture)
-        guard available else { throw XCTSkip("Live JMA rain tiles unavailable from CI; deterministic failure fallback is tested separately.") }
-        XCTAssertTrue(app.descendants(matching: .any)["rainLegend"].exists)
-        XCTAssertTrue(app.descendants(matching: .any)["temperatureBubble"].exists)
-        let timeline = app.sliders["rainTimeline"]
-        XCTAssertTrue(timeline.exists); timeline.adjust(toNormalizedSliderPosition: 0.4)
-        XCTAssertTrue(playback.exists)
-        app.buttons["closeMap"].tap()
-    }
     func testLivePullRefreshRemainsResponsive() throws {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-test-reset", "--ui-test-offline", "--ui-test-manual-network"]
@@ -104,6 +54,44 @@ final class SoraWeatherUITests: XCTestCase {
         try openCities(app)
         XCTAssertTrue(app.textFields["citySearch"].waitForExistence(timeout: 10))
         app.buttons["closeCities"].tap()
+    }
+    func testSafetyEmptyStateAndClose() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-reset", "--ui-test-offline"]
+        app.launch(); dismissLocationPrompt()
+        XCTAssertTrue(app.buttons["openSafety"].waitForExistence(timeout: 20)); app.buttons["openSafety"].tap()
+        XCTAssertTrue(app.staticTexts["safetyTitle"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["safetyEmpty"].exists)
+        app.buttons["closeSafety"].tap()
+        assertVisible(app.staticTexts["cityTitle.osaka"])
+    }
+    func testSafetyWarningsQuakesAndOtherCity() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-reset", "--ui-test-offline", "--ui-test-warning", "--ui-test-cities"]
+        app.launch(); dismissLocationPrompt()
+        XCTAssertTrue(app.buttons["openSafety"].waitForExistence(timeout: 20)); app.buttons["openSafety"].tap()
+        XCTAssertTrue(app.staticTexts["safetyTitle"].waitForExistence(timeout: 10))
+        let row = app.buttons["warningRow.fixture-warning"]
+        XCTAssertTrue(row.waitForExistence(timeout: 10)); row.tap()
+        XCTAssertTrue(app.staticTexts["JMA UI fixture · 府県単位"].waitForExistence(timeout: 10))
+        let quake = app.buttons["quakeRow.fixture-quake"]
+        for _ in 0..<5 { if quake.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(quake.isHittable)
+        let other = app.buttons["otherSafety.tokyo"]
+        for _ in 0..<5 { if other.isHittable { break }; app.swipeDown() }
+        XCTAssertTrue(other.isHittable); other.tap()
+        assertVisible(app.staticTexts["cityTitle.tokyo"])
+    }
+    func testColdNotificationRouteWithLargestDynamicType() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-reset", "--ui-test-offline", "--ui-test-safety-route", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch(); dismissLocationPrompt()
+        XCTAssertTrue(app.staticTexts["safetyTitle"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.staticTexts["safetyCityName"].label.contains("東京"))
+        XCTAssertTrue(app.buttons["closeSafety"].isHittable)
+        let capture = XCTAttachment(screenshot: app.screenshot()); capture.name = "accessible-safety-page"; capture.lifetime = .keepAlways; add(capture)
+        app.buttons["closeSafety"].tap()
+        assertVisible(app.staticTexts["cityTitle.tokyo"])
     }
     private func assertScope(_ app: XCUIApplication, region: String) {
         let value = app.staticTexts["forecastLoadScope"]

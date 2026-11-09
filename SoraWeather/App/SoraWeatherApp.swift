@@ -10,6 +10,9 @@ import SwiftUI
         if ProcessInfo.processInfo.arguments.contains("--ui-test-reset") {
             for key in ["savedCities.v1", "selectedCityID", "selectedRegion.v1", "region"] { UserDefaults.standard.removeObject(forKey: key) }
         }
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-safety-route") {
+            if let key = SafetyDestination.cityKey(userInfo: ["regionID": "tokyo"], identifier: "fixture") { SafetyNavigation.shared.open(key) }
+        }
         #endif
         RainNotifications.shared.install()
     }

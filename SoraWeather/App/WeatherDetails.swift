@@ -46,7 +46,7 @@ struct WarningBanner: View {
         }
     }
     static func color(_ level: WarningLevel) -> Color {
-        switch level { case .advisory: return .yellow; case .warning: return Color(red: 0.9, green: 0.25, blue: 0.12); case .special: return Color(red: 0.53, green: 0.2, blue: 0.65) }
+        switch level { case .advisory: return .yellow; case .warning: return Color(red: 0.9, green: 0.25, blue: 0.12); case .special: return Color(red: 0.68, green: 0.12, blue: 0.5) }
     }
     var body: some View {
         Button(action: action) {
@@ -60,33 +60,6 @@ struct WarningBanner: View {
                 Image(systemName: "chevron.right").font(.caption.weight(.semibold))
             }.padding(13).foregroundStyle(level == .advisory ? Color.black : Color.white)
                 .background(Self.color(level), in: RoundedRectangle(cornerRadius: 20))
-        }.buttonStyle(.plain).accessibilityIdentifier("warningBanner")
-    }
-}
-struct WarningDetails: View {
-    let region: Region
-    let items: [DisasterItem]
-    let fetched: Date?
-    @Environment(\.dismiss) private var dismiss
-    private func t(_ zh: String, _ ja: String) -> String { AppLanguage.code == "ja" ? ja : zh }
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 16) {
-                    Text(region.name + " · " + t("府县范围 JMA 公告", "府県単位のJMA発表")).font(.subheadline).foregroundStyle(.secondary)
-                    if let fetched { Text(t("获取于 ", "取得 ") + fetched.formatted(.dateTime.hour().minute())).font(.caption).foregroundStyle(.secondary) }
-                    ForEach(items) { item in
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text(item.title).font(.headline).foregroundStyle(WarningBanner.color(WarningLevel.level(for: item)))
-                            Text(item.detail).font(.body).textSelection(.enabled)
-                            Text(item.issued, style: .date).font(.caption)
-                            Text(item.issued, style: .time).font(.caption).environment(\.timeZone, JapanTime.calendar.timeZone)
-                        }.soraCard()
-                    }
-                }.padding(20)
-            }.background(Color("LaunchBackground").ignoresSafeArea(.all))
-                .navigationTitle(t("气象警报", "気象警報"))
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button(t("完成", "完了")) { dismiss() }.accessibilityIdentifier("closeWarningDetails") } }
-        }.preferredColorScheme(.dark).tint(.white)
+        }.buttonStyle(.plain).accessibilityLabel("JMA，" + title + "，\(items.count)" + (AppLanguage.code == "ja" ? "件・府県単位" : "条，府县范围")).accessibilityHint(AppLanguage.code == "ja" ? "防災情報を開く" : "打开灾害预警详情").accessibilityIdentifier("warningBanner")
     }
 }

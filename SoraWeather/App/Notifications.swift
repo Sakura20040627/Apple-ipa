@@ -48,6 +48,7 @@ import BackgroundTasks
             content.title = japanese ? "雨の時間帯 · \(region.name)" : "降雨时段 · \(region.name)"
             content.body = japanese ? "\(time(window.date))以降の予報に雨。時間帯の予報で、降り始めの通知ではありません。" : "\(time(window.date)) 起的预报时段可能有雨。这是时段提醒，无法预测准确起雨时间。"
         }
+        content.userInfo = ["regionID": region.id, "destination": "safety"]
         let requestID = "rain.\(region.id).\(token.uuidString)"
         guard token == revision else { return nil }
         do {
@@ -59,6 +60,11 @@ import BackgroundTasks
     }
     private func time(_ date: Date) -> String { let f = DateFormatter(); f.timeZone = JapanTime.calendar.timeZone; f.dateFormat = "HH:mm"; return f.string(from: date) }
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions { [.banner, .sound, .list] }
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        guard response.actionIdentifier != UNNotificationDismissActionIdentifier,
+              let key = SafetyDestination.cityKey(userInfo: response.notification.request.content.userInfo, identifier: response.notification.request.identifier) else { completionHandler(); return }
+        Task { @MainActor in SafetyNavigation.shared.open(key); completionHandler() }
+    }
     func scheduleBackground() {
         BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.backgroundID)
         guard UserDefaults.standard.bool(forKey: "rainEnabled") else { return }
