@@ -18,7 +18,8 @@ struct DisasterWarningsView: View {
     private var otherCities: [SavedCity] { cities.cities.filter { $0.id != cityID && !center.record($0.region).warnings.isEmpty } }
     private var quakeRecord: SafetyRecord { center.records.values.filter { $0.quakesFetched != nil }.max { ($0.quakesFetched ?? .distantPast) < ($1.quakesFetched ?? .distantPast) } ?? record }
     private var scope: String {
-        let name = Region.supported.first(where: { $0.office == region.office })?.name ?? region.office
+        let names = ["270000": "大阪府", "130000": "東京都", "260000": "京都府", "280000": "兵庫県", "230000": "愛知県", "400000": "福岡県"]
+        let name = names[region.office] ?? "JMA \(region.office)"
         return name + t(" · 府县范围", " · 府県単位")
     }
     var body: some View {
