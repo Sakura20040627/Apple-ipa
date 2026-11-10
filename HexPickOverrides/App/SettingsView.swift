@@ -65,7 +65,22 @@ struct AboutView: View {
         List {
             Section { Text("HexPick").font(.largeTitle.bold()); Text("海克斯大乱斗攻略助手 · \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")（\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—")）\n免费、无广告、无需登录。") }
             Section("数据来源与版权") {
-                NavigationLink("Mayhempedia（MIT）／ARAMMayhem（CC BY 4.0）／aramhex-data（CC BY-NC 4.0）") { DataSourcesView() }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Mayhempedia · MIT").font(.headline)
+                    Text("Copyright (c) 2026 Mayhempedia").font(.caption).foregroundStyle(Theme.secondary)
+                }
+                Link("Mayhempedia MIT 许可", destination: URL(string: "https://github.com/boxsbraindump/Mayhempedia/blob/main/LICENSE")!)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("ARAMMayhem · CC BY 4.0").font(.headline)
+                    Text("Data: arammayhem.com").font(.caption).foregroundStyle(Theme.secondary)
+                }
+                Link("ARAMMayhem CC BY 4.0 许可", destination: URL(string: "https://creativecommons.org/licenses/by/4.0/")!)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("aramhex-data · CC BY-NC 4.0").font(.headline)
+                    Text("海克斯大乱斗统计数据 · 作者 czgreat · 不可商业使用").font(.caption).foregroundStyle(Theme.secondary)
+                }
+                Link("aramhex-data CC BY-NC 4.0 许可", destination: URL(string: "https://creativecommons.org/licenses/by-nc/4.0/")!)
+                NavigationLink("完整署名、修订信息与许可原文") { DataSourcesView() }
             }
             Section { Text("HexPick 并非由 Riot Games 认可，不代表 Riot Games 或任何参与制作、管理英雄联盟的人员的观点。League of Legends 及相关素材归 Riot Games 所有")
                 Text("本应用仅根据用户提供的名称或照片分析公开统计，不读取 PC 游戏内存，不提供跨设备游戏悬浮窗。") }
