@@ -93,6 +93,7 @@ struct GuideCard: View {
                 Text("装备顺序／玩法长文：此公开数据未提供。")
                     .font(.caption).foregroundStyle(Theme.secondary)
                 if !guide.tags.isEmpty { Text("编辑标签：" + guide.tags.joined(separator: "、")).font(.caption).foregroundStyle(Theme.blue) }
+                else { Text("编辑标签：来源未提供").font(.caption).foregroundStyle(Theme.secondary) }
             }
             if !guide.synergies.isEmpty {
                 ForEach(guide.synergies) { row in

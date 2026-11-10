@@ -33,6 +33,6 @@ final class GuideTests: XCTestCase {
         let sameHero = library.guides.filter { $0.heroID == may.heroID }
         XCTAssertTrue(sameHero.contains { $0.metadata.source == .aramMayhem })
         XCTAssertTrue(sameHero.contains { $0.id == may.id })
-        XCTAssertTrue(library.guides.filter { $0.metadata.source == .aramMayhem }.allSatisfy { !$0.tags.isEmpty })
+        XCTAssertEqual(library.guides.filter { $0.metadata.source == .aramMayhem && $0.tags.isEmpty }.count, 403, "Missing upstream tags must stay missing, never be invented")
     }
 }

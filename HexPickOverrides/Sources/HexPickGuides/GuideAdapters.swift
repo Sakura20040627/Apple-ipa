@@ -61,7 +61,7 @@ public struct ARAMMayhemAdapter: BuildGuideAdapter {
             }
             let tags = row.types.map { ["god": "强力组合", "strong": "强力", "blackTech": "特殊玩法", "trap": "避坑"][ $0 ] ?? $0 }
             let link = URL(string: row.url).flatMap { $0.scheme == "https" && $0.host == "arammayhem.com" ? $0 : nil } ?? source.home
-            let explanation = "来源编辑标签：\(tags.joined(separator: "、"))。公开数据未提供该组合的具体机制说明、装备顺序或强化胜率；可打开原始页面核对。"
+            let explanation = (tags.isEmpty ? "来源未提供编辑标签。" : "来源编辑标签：\(tags.joined(separator: "、"))。") + "公开数据未提供该组合的具体机制说明、装备顺序或强化胜率；可打开原始页面核对。"
             let synergy = values.count > 1 ? [GuideSynergy(id: "aram-combo:\(row.comboId)", title: "联动 · 组合标签", augments: values, explanation: explanation, sourceURL: link)] : []
             return BuildGuide(id: "aram:\(row.comboId)", heroID: hero?.id ?? "aram-hero:\(row.championId)", heroName: hero?.name ?? row.championId,
                               title: values.map(\.name).joined(separator: " + "), kind: .combination,
