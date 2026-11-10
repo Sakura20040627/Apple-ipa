@@ -37,8 +37,10 @@ public struct GuideAugment: Codable, Sendable, Identifiable, Hashable {
     public let iconURL: String?
     public let availability: String
     public let note: String?
-    public init(id: String, sourceID: String, riotID: String?, name: String, rarity: String, iconURL: String?, availability: String = "unknown", note: String? = nil) {
-        self.id = id; self.sourceID = sourceID; self.riotID = riotID; self.name = name; self.rarity = rarity; self.iconURL = iconURL; self.availability = availability; self.note = note
+    public let trapReason: String?
+    public let invalidSince: String?
+    public init(id: String, sourceID: String, riotID: String?, name: String, rarity: String, iconURL: String?, availability: String = "unknown", note: String? = nil, trapReason: String? = nil, invalidSince: String? = nil) {
+        self.id = id; self.sourceID = sourceID; self.riotID = riotID; self.name = name; self.rarity = rarity; self.iconURL = iconURL; self.availability = availability; self.note = note; self.trapReason = trapReason; self.invalidSince = invalidSince
     }
 }
 public struct GuideItem: Codable, Sendable, Identifiable, Hashable {

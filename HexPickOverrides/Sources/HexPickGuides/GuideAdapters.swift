@@ -17,14 +17,19 @@ public struct MayhempediaAdapter: BuildGuideAdapter {
         let items: [Reference]?; let starterItems: [Reference]?; let sources: [String]?
     }
     private struct Groups: Decodable { let core: [Reference]?; let good: [Reference]?; let trap: [Reference]? }
-    private struct Reference: Decodable { let id: Int; let name: String }
+    private struct Reference: Decodable { let id: Int; let name: String; let reason: String?; let invalidSince: String? }
     public func convert(_ payload: Data, context: AdapterContext) throws -> [BuildGuide] {
         try context.mayMetadata.validate()
         guard context.mayMetadata.source == source else { throw GuideError.missingAttribution }
         return try JSONDecoder().decode([File].self, from: payload).flatMap { file in
             file.archetypes.map { route in
                 func augments(_ values: [Reference]?) -> [GuideAugment] {
-                    (values ?? []).map { context.augment(source: "may", id: String($0.id), name: $0.name) }
+                    (values ?? []).map { reference in
+                        let value = context.augment(source: "may", id: String(reference.id), name: reference.name)
+                        return GuideAugment(id: value.id, sourceID: value.sourceID, riotID: value.riotID, name: value.name,
+                                            rarity: value.rarity, iconURL: value.iconURL, availability: value.availability, note: value.note,
+                                            trapReason: reference.reason, invalidSince: reference.invalidSince)
+                    }
                 }
                 func items(_ values: [Reference]?) -> [GuideItem] { (values ?? []).map { context.item(id: String($0.id), name: $0.name) } }
                 let path = "https://github.com/boxsbraindump/Mayhempedia/blob/\(context.mayMetadata.revision)/data/builds/"

@@ -14,7 +14,14 @@ final class VisualTests: XCTestCase {
         if large { app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"] }
         app.launch()
         XCTAssertTrue(app.tabBars.buttons["英雄"].waitForExistence(timeout: 20))
-        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "hero-")).firstMatch.waitForExistence(timeout: 30))
+        app.tabBars.buttons["英雄"].tap()
+        // At large accessibility sizes the lazy hero list begins below the first screen.
+        let hero = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "hero-")).firstMatch
+        for _ in 0..<3 {
+            if hero.waitForExistence(timeout: 3) { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(hero.exists)
         return app
     }
     func testDiscoverSourcesAndCopyright() {

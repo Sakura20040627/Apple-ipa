@@ -130,6 +130,10 @@ struct GuideCard: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 ResourceIcon(request: entry.resource(version: guide.metadata.revision), size: 56, trap: trap)
                                 Text(entry.name).font(.caption).fixedSize(horizontal: false, vertical: true)
+                                if trap {
+                                    Text(entry.trapReason ?? "来源未提供逐项原因").font(.caption2).foregroundStyle(Theme.negative)
+                                    if let patch = entry.invalidSince { Text("来源标记失效版本：" + patch).font(.caption2).foregroundStyle(Theme.negative) }
+                                }
                                 if let note = entry.note { Text(note).font(.caption2).foregroundStyle(Theme.gold) }
                                 if entry.availability == "legacy" || entry.availability == "retired" {
                                     Text("来源标为历史／下架；不保证当前有效").font(.caption2).foregroundStyle(Theme.negative)
