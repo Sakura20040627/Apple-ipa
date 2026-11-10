@@ -10,11 +10,9 @@ let cryptoTargets: [Target.Dependency] = []
 let package = Package(
     name: "HexPickCore",
     platforms: [.iOS("26.0"), .macOS(.v13)],
-    products: [.library(name: "HexPickCore", targets: ["HexPickCore"]), .library(name: "HexPickGuides", targets: ["HexPickGuides"])],
+    products: [.library(name: "HexPickCore", targets: ["HexPickCore"])],
     dependencies: cryptoPackages,
     targets: [
-        .target(name: "HexPickGuides", resources: [.copy("Resources")]),
-        .testTarget(name: "HexPickGuidesTests", dependencies: ["HexPickGuides"]),
         .target(name: "HexPickCore", dependencies: cryptoTargets, resources: [.copy("Seed")]),
         .testTarget(name: "HexPickCoreTests", dependencies: ["HexPickCore"])
     ]

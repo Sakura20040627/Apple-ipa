@@ -23,7 +23,7 @@ struct CompareView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 Text("选对这一次。").font(.largeTitle.bold())
-                Text("先选英雄，再填入屏幕上的三个海克斯。").foregroundStyle(Theme.secondary)
+                Text("开局先选择本局英雄，再填写三个候选海克斯。点击下方“请选择英雄”即可开始；也可导入截图或拍摄屏幕。").foregroundStyle(Theme.secondary)
                 Button { showHeroPicker = true } label: {
                     HStack {
                         if let hero = store.heroes[heroID] { HeroPortrait(id: heroID, name: hero.name, size: 48) }

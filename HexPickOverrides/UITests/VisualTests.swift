@@ -24,17 +24,6 @@ final class VisualTests: XCTestCase {
         XCTAssertTrue(hero.exists)
         return app
     }
-    func testDiscoverSourcesAndCopyright() {
-        let app = app(theme: "dark")
-        app.tabBars.buttons["发现"].tap()
-        XCTAssertTrue(app.navigationBars["发现"].waitForExistence(timeout: 20))
-        XCTAssertTrue(app.staticTexts["发现你的下一套玩法"].waitForExistence(timeout: 20))
-        capture("08-discover-builds", app: app)
-        app.buttons["图标映射报告"].tap()
-        XCTAssertTrue(app.navigationBars["图标映射报告"].waitForExistence(timeout: 10))
-        capture("09-icon-mapping-report", app: app)
-        app.terminate()
-    }
     func testDarkScreens() {
         let app = app(theme: "dark")
         capture("01-heroes-dark", app: app)

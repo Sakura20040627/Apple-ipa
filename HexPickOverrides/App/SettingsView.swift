@@ -33,7 +33,7 @@ struct SettingsView: View {
             Section("关于") {
                 NavigationLink("关于 HexPick") { AboutView() }
                 NavigationLink("推荐算法与统计口径") { AlgorithmView() }
-                NavigationLink("数据来源与版权") { DataSourcesView() }
+                NavigationLink("数据来源与授权") { LicenseView() }
                 NavigationLink("隐私说明") { PrivacyView() }
             }
         }.hexBackground().navigationTitle("设置")
@@ -64,24 +64,6 @@ struct AboutView: View {
     var body: some View {
         List {
             Section { Text("HexPick").font(.largeTitle.bold()); Text("海克斯大乱斗攻略助手 · \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")（\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—")）\n免费、无广告、无需登录。") }
-            Section("数据来源与版权") {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Mayhempedia · MIT").font(.headline)
-                    Text("Copyright (c) 2026 Mayhempedia").font(.caption).foregroundStyle(Theme.secondary)
-                }
-                Link("Mayhempedia MIT 许可", destination: URL(string: "https://github.com/boxsbraindump/Mayhempedia/blob/main/LICENSE")!)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("ARAMMayhem · CC BY 4.0").font(.headline)
-                    Text("Data: arammayhem.com").font(.caption).foregroundStyle(Theme.secondary)
-                }
-                Link("ARAMMayhem CC BY 4.0 许可", destination: URL(string: "https://creativecommons.org/licenses/by/4.0/")!)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("aramhex-data · CC BY-NC 4.0").font(.headline)
-                    Text("海克斯大乱斗统计数据 · 作者 czgreat · 不可商业使用").font(.caption).foregroundStyle(Theme.secondary)
-                }
-                Link("aramhex-data CC BY-NC 4.0 许可", destination: URL(string: "https://creativecommons.org/licenses/by-nc/4.0/")!)
-                NavigationLink("完整署名、修订信息与许可原文") { DataSourcesView() }
-            }
             Section { Text("HexPick 并非由 Riot Games 认可，不代表 Riot Games 或任何参与制作、管理英雄联盟的人员的观点。League of Legends 及相关素材归 Riot Games 所有")
                 Text("本应用仅根据用户提供的名称或照片分析公开统计，不读取 PC 游戏内存，不提供跨设备游戏悬浮窗。") }
         }.navigationTitle("关于应用")
@@ -119,7 +101,7 @@ struct PrivacyView: View {
                 Text("收藏、最近查看与主题保存在本机。删除应用可移除这些记录。是否纳入系统备份由你的 iOS 设置决定。")
             }
             Section("网络连接") {
-                Text("启动及手动更新时请求 GitHub 的公开统计数据。英雄头像随应用内置；查看强化时会连接 raw.communitydragon.org 下载映射及图标。强化与装备图标共用内存／磁盘缓存。构筑攻略快照离线内置，与统计数据独立。图标有效期为 7 天，并按游戏版本与缓存格式版本隔离。网络服务器可能按其政策记录 IP 等连接信息，HexPick 不主动传输用户账号或追踪标识。")
+                Text("启动及手动更新时请求 GitHub 的公开统计数据。英雄头像随应用内置；查看强化时会连接 raw.communitydragon.org 下载映射及图标。强化与装备图标共用内存／磁盘缓存。图标有效期为 7 天，并按游戏版本与缓存格式版本隔离。网络服务器可能按其政策记录 IP 等连接信息，HexPick 不主动传输用户账号或追踪标识。")
                 Text("只有点击授权说明中的链接才会打开外部网站，攻略、识别与推荐均在应用内完成。")
             }
         }.navigationTitle("隐私说明")

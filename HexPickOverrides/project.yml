@@ -13,8 +13,8 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
     IPHONEOS_DEPLOYMENT_TARGET: '26.0'
     TARGETED_DEVICE_FAMILY: '1,2'
-    MARKETING_VERSION: '1.2.0'
-    CURRENT_PROJECT_VERSION: '3'
+    MARKETING_VERSION: '1.3.0'
+    CURRENT_PROJECT_VERSION: '4'
 targets:
   HexPick:
     type: application
@@ -23,8 +23,6 @@ targets:
       - path: App
     dependencies:
       - package: HexPickCore
-      - package: HexPickCore
-        product: HexPickGuides
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.kaikou.HexPick
@@ -35,8 +33,8 @@ targets:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: HexPick
-        CFBundleShortVersionString: '1.2.0'
-        CFBundleVersion: '3'
+        CFBundleShortVersionString: '1.3.0'
+        CFBundleVersion: '4'
         LSRequiresIPhoneOS: true
         UILaunchScreen: {}
         NSCameraUsageDescription: 拍摄电脑屏幕，在本机识别海克斯名称。照片不会上传。
@@ -56,12 +54,9 @@ targets:
     platform: iOS
     sources:
       - Tests/HexPickCoreTests
-      - Tests/HexPickGuidesTests
     dependencies:
       - target: HexPick
       - package: HexPickCore
-      - package: HexPickCore
-        product: HexPickGuides
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES

@@ -97,6 +97,7 @@ struct HeroesView: View {
 struct HeroDetailView: View {
     @Environment(AppStore.self) private var store
     let heroID: String
+    @State private var section = HeroDetailSection.augments
     @State private var rarity = ""
     @State private var ordering: AugmentSort = .recommendation
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -123,6 +124,9 @@ struct HeroDetailView: View {
             if let hero {
                 VStack(alignment: .leading, spacing: 24) {
                     HeroHeader(id: heroID, hero: hero)
+                    equipment
+                    HeroDetailSegments(selection: $section)
+                    if section == .augments {
                     NavigationLink { CompareView(initialHeroID: heroID) } label: {
                         Label("开始三选一", systemImage: "rectangle.stack").font(.headline).padding(14).frame(maxWidth: .infinity)
                     }.buttonStyle(.plain).glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 20))
@@ -134,7 +138,7 @@ struct HeroDetailView: View {
                     }.pickerStyle(.menu).frame(minHeight: 44)
                     Text(ordering == .wilson ? "Wilson 95% 下界仅用于此列表排序，不改变三选一推荐算法。" : "推荐使用原保守评分；持有率 = 当前英雄组合样本 ÷ 英雄出场次数，不代表强化出现概率。")
                         .font(.caption).foregroundStyle(Theme.secondary)
-                    if results.isEmpty { Text("当前筛选暂无足够数据").foregroundStyle(Theme.secondary) }
+                    if results.isEmpty { Text("暂无数据").foregroundStyle(Theme.secondary) }
                     LazyVStack(alignment: .leading, spacing: 14, pinnedViews: [.sectionHeaders]) {
                         ForEach(groups, id: \.self) { group in
                             Section {
@@ -156,8 +160,11 @@ struct HeroDetailView: View {
                             }
                         }
                     }.animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: ordering)
-                    equipment
-                    spells
+                    } else {
+                        Text("常规玩法").font(.title2.bold())
+                        Text("通用出门装、成装顺序与技能加点：暂无数据。现有 Seed 仅提供部分强化持有者的装备参考，不能作为通用出装顺序。").foregroundStyle(Theme.secondary)
+                        spells
+                    }
                     Text(statisticalNotice).font(.footnote).foregroundStyle(Theme.secondary)
                 }.padding(20)
             } else { ContentUnavailableView("英雄暂无数据", systemImage: "person.crop.circle.badge.questionmark") }
@@ -174,25 +181,29 @@ struct HeroDetailView: View {
     @ViewBuilder private var equipment: some View {
         if let table = store.dataset?.items[heroID], !table.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                Text("装备参考 · 全体样本").font(.title2.bold())
+                Text("出装推荐").font(.title2.bold())
                 Text("仅适用于下列海克斯的持有者。第一条装备记录为代理，不证明实际绑定目标，不是通用出装顺序。")
                     .font(.caption).foregroundStyle(Theme.secondary)
                 ForEach(table.keys.sorted(), id: \.self) { id in
                     if let reference = table[id] {
                         Text(store.augments[id]?.name ?? "海克斯 \(id)").font(.headline)
-                        ForEach(reference.items.indices, id: \.self) { i in
-                            let item = reference.items[i]
-                            HStack {
-                                EquipmentIcon(id: item.item, name: item.name, version: store.dataset?.manifest.patch ?? "latest")
-                                Text(item.name); Spacer()
-                                if reference.showWinrate == true { Text(percent(item.games > 0 ? Double(item.wins) / Double(item.games) : nil)).monospacedDigit() }
-                                if reference.showSampleSize == true { Text("\(item.games) 局").foregroundStyle(Theme.secondary) }
-                            }.font(.subheadline)
+                        ScrollView(.horizontal) {
+                            HStack(alignment: .top, spacing: 16) {
+                                ForEach(reference.items.indices, id: \.self) { i in
+                                    let item = reference.items[i]
+                                    VStack(spacing: 6) {
+                                        EquipmentIcon(id: item.item, name: item.name, version: store.dataset?.manifest.patch ?? "seed")
+                                        Text(item.name).font(.caption)
+                                    }.frame(width: 92)
+                                }
+                            }
                         }
                         if let note = reference.note { Text("数据源注：\(note)").font(.caption).foregroundStyle(Theme.secondary) }
                     }
                 }
             }
+        } else {
+            VStack(alignment: .leading) { Text("出装推荐").font(.title2.bold()); Text("暂无数据").foregroundStyle(Theme.secondary) }
         }
     }
     @ViewBuilder private var spells: some View {

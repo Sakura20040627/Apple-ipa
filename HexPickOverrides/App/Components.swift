@@ -119,13 +119,13 @@ struct RecommendationCard: View {
 }
 struct RootView: View {
     @Environment(AppStore.self) private var store
+    @State private var selected = 1
     var body: some View {
-        TabView {
-            Tab("英雄", systemImage: "square.grid.2x2") { NavigationStack { HeroesView() } }
-            Tab("三选一", systemImage: "rectangle.stack") { NavigationStack { CompareView() } }
-            Tab("发现", systemImage: "sparkles.rectangle.stack") { NavigationStack { DiscoverView() } }
-            Tab("图鉴", systemImage: "hexagon") { NavigationStack { AugmentLibraryView() } }
-            Tab("设置", systemImage: "gearshape") { NavigationStack { SettingsView() } }
+        TabView(selection: $selected) {
+            Tab("英雄", systemImage: "square.grid.2x2", value: 0) { NavigationStack { HeroesView() } }
+            Tab("三选一", systemImage: "rectangle.stack", value: 1) { NavigationStack { CompareView() } }
+            Tab("图鉴", systemImage: "hexagon", value: 2) { NavigationStack { AugmentLibraryView() } }
+            Tab("设置", systemImage: "gearshape", value: 3) { NavigationStack { SettingsView() } }
         }.tint(Theme.blue)
             .hexBackground()
             .overlay {
