@@ -21,9 +21,9 @@ struct DiscoverView: View {
                     Text("内置带版本的资料快照；攻略不会因统计数据更新而被自动改写。")
                         .font(.caption).foregroundStyle(Theme.secondary)
                     HStack {
-                        NavigationLink("装备目录", systemImage: "shippingbox") { EquipmentCatalogView() }.frame(minHeight: 44)
+                        NavigationLink { EquipmentCatalogView() } label: { Label("装备目录", systemImage: "shippingbox") }.frame(minHeight: 44)
                         Spacer()
-                        NavigationLink("图标映射报告", systemImage: "checklist") { IconMappingReportView() }.frame(minHeight: 44)
+                        NavigationLink { IconMappingReportView() } label: { Label("图标映射报告", systemImage: "checklist") }.frame(minHeight: 44)
                     }.font(.subheadline)
                 }.hexCard()
                 Picker("攻略来源", selection: $source) {
