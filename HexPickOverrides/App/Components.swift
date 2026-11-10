@@ -123,6 +123,7 @@ struct RootView: View {
         TabView {
             Tab("英雄", systemImage: "square.grid.2x2") { NavigationStack { HeroesView() } }
             Tab("三选一", systemImage: "rectangle.stack") { NavigationStack { CompareView() } }
+            Tab("发现", systemImage: "sparkles.rectangle.stack") { NavigationStack { DiscoverView() } }
             Tab("图鉴", systemImage: "hexagon") { NavigationStack { AugmentLibraryView() } }
             Tab("设置", systemImage: "gearshape") { NavigationStack { SettingsView() } }
         }.tint(Theme.blue)

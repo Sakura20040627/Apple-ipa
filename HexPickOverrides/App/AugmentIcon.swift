@@ -18,8 +18,8 @@ private actor IconDownloadGate {
 }
 
 /// Only cosmetic metadata is fetched here. Statistical data never passes through this service.
-actor AugmentIconCache {
-    static let shared = AugmentIconCache()
+actor ResourceIconCache {
+    static let shared = ResourceIconCache()
     private static let base = URL(string: "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/zh_cn/")!
     private static let imageBase = URL(string: "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/")!
     private let memory = NSCache<NSString, NSData>()
@@ -33,7 +33,7 @@ actor AugmentIconCache {
     private var cleaned = false
     private let iconTTL: TimeInterval = 7 * 24 * 3600
     private let manifestTTL: TimeInterval = 24 * 3600
-    private let schema = "icons-v1"
+    private let schema = "icons-v2"
     struct Entry: Decodable, Sendable {
         let id: Int
         let nameTRA: String
@@ -42,7 +42,7 @@ actor AugmentIconCache {
     }
     enum Failure: Error { case unmapped, invalidResponse, coolingDown }
     init() {
-        directory = URL.cachesDirectory.appendingPathComponent("HexPickIcons-v1", isDirectory: true)
+        directory = URL.cachesDirectory.appendingPathComponent("HexPickIcons-v2", isDirectory: true)
         memory.totalCostLimit = 24 * 1024 * 1024
         memory.countLimit = 250
     }
@@ -109,8 +109,11 @@ actor AugmentIconCache {
         }
     }
     func image(id: String, name: String, rarity: String, version: String, force: Bool = false) async throws -> Data {
+        try await image(ResourceIconRequest(kind: .augment, id: "riot:" + id, name: name, rarity: rarity, version: version, url: nil), force: force)
+    }
+    func image(_ request: ResourceIconRequest, force: Bool = false) async throws -> Data {
         cleanDisk()
-        let requestKey = key("\(schema)|\(version)|\(id)|\(name)|\(rarity)")
+        let requestKey = key("\(schema)|\(request.identity)")
         if !force, let date = failed[requestKey], Date().timeIntervalSince(date) < 30 { throw Failure.coolingDown }
         if !force, let date = memoryDates[requestKey], Date().timeIntervalSince(date) < iconTTL, let data = memory.object(forKey: requestKey as NSString) { return data as Data }
         let disk = directory.appendingPathComponent(requestKey + ".png")
@@ -119,14 +122,22 @@ actor AugmentIconCache {
         }
         if let task = pending[requestKey] { return try await task.value }
         let task = Task<Data, Error> {
-            let rows = try await self.entries(force: force)
-            let expectedRarity = ["silver": "kSilver", "gold": "kGold", "prismatic": "kPrismatic"][rarity]
-            // Reject numeric collisions, renamed entries and wrong tiers rather than guessing an icon.
-            guard let row = rows.first(where: { String($0.id) == id && $0.nameTRA == name && $0.rarity == expectedRarity }) else { throw Failure.unmapped }
-            let prefix = "/lol-game-data/assets/"
-            let path = row.augmentSmallIconPath.lowercased()
-            guard path.hasPrefix(prefix), path.hasSuffix(".png"), !path.contains(".."), !path.contains("?"), !path.contains("#") else { throw Failure.invalidResponse }
-            let url = Self.imageBase.appendingPathComponent(String(path.dropFirst(prefix.count)))
+            let url: URL
+            if let explicit = request.url {
+                guard Self.isCommunityDragonImage(explicit) else { throw Failure.invalidResponse }
+                url = explicit
+            } else if request.kind == .augment, request.id.hasPrefix("riot:") {
+                let rows = try await self.entries(force: force)
+                let id = String(request.id.dropFirst(5))
+                let expectedRarity = ["silver": "kSilver", "gold": "kGold", "prismatic": "kPrismatic"][request.rarity]
+                guard let row = rows.first(where: { String($0.id) == id && $0.nameTRA == request.name && $0.rarity == expectedRarity }) else { throw Failure.unmapped }
+                let prefix = "/lol-game-data/assets/"
+                let path = row.augmentSmallIconPath.lowercased()
+                guard path.hasPrefix(prefix), !path.contains("..") else { throw Failure.invalidResponse }
+                let resolved = Self.imageBase.appendingPathComponent(String(path.dropFirst(prefix.count)))
+                guard Self.isCommunityDragonImage(resolved) else { throw Failure.invalidResponse }
+                url = resolved
+            } else { throw Failure.unmapped }
             let data = try await Self.download(url, limit: 2_000_000)
             // Validate and downsample before persisting; discard huge or malformed image payloads.
             guard let source = CGImageSourceCreateWithData(data as CFData, nil),
@@ -143,6 +154,20 @@ actor AugmentIconCache {
             return data
         } catch { pending[requestKey] = nil; failed[requestKey] = Date(); throw error }
     }
+    private static func isCommunityDragonImage(_ url: URL) -> Bool {
+        url.scheme == "https" && url.host == "raw.communitydragon.org" && url.user == nil && url.password == nil && url.query == nil && url.fragment == nil && !url.path.contains("..") && ["png", "webp", "jpg", "jpeg"].contains(url.pathExtension.lowercased())
+    }
+    func prefetchResources(_ requests: [ResourceIconRequest]) async {
+        for batchStart in stride(from: 0, to: min(requests.count, 8), by: 4) {
+            guard !Task.isCancelled else { return }
+            await withTaskGroup(of: Void.self) { group in
+                for request in requests[batchStart..<min(batchStart + 4, requests.count)] {
+                    group.addTask { _ = try? await self.image(request) }
+                }
+            }
+        }
+    }
+
     func prefetch(_ rows: [(String, String, String)], version: String) async {
         // Four concurrent requests; callers pass a bounded lookahead window, never the full catalogue.
         for start in stride(from: 0, to: min(rows.count, 8), by: 4) {
@@ -154,41 +179,62 @@ actor AugmentIconCache {
         }
     }
 }
-struct AugmentIcon: View {
-    @Environment(AppStore.self) private var store
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+typealias AugmentIconCache = ResourceIconCache
+
+struct ResourceIconRequest: Hashable, Sendable {
+    enum Kind: String, Sendable { case augment, item }
+    let kind: Kind
     let id: String
+    let name: String
     let rarity: String
+    let version: String
+    let url: URL?
+    var identity: String { "\(kind.rawValue)|\(id)|\(name)|\(rarity)|\(version)|\(url?.absoluteString ?? "unmapped")" }
+}
+struct ResourceIcon: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let request: ResourceIconRequest
     var size: CGFloat = 48
+    var trap = false
     @State private var image: UIImage?
     @State private var failed = false
     @State private var retry = 0
-    private var identity: String { "\(id)|\(store.dataset?.manifest.patch ?? "latest")|\(retry)" }
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 14).fill(Theme.rarityGradient(rarity))
-            if let image { Image(uiImage: image).resizable().scaledToFit().padding(6).accessibilityHidden(true) }
-            else { AugmentGlyph(rarity: rarity, size: size).accessibilityHidden(true) }
+            RoundedRectangle(cornerRadius: 14).fill(Theme.rarityGradient(request.rarity))
+            if let image { Image(uiImage: image).resizable().scaledToFit().padding(6) }
+            else { Image(systemName: request.kind == .item ? "shippingbox" : "hexagon").font(.title2).foregroundStyle(Theme.rarityColor(request.rarity)) }
         }.frame(width: size, height: size)
-            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Theme.rarityColor(rarity), lineWidth: 1.5))
+            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(trap ? Theme.negative : Theme.rarityColor(request.rarity), lineWidth: trap ? 2 : 1.5))
+            .overlay(alignment: .topTrailing) {
+                if trap { Image(systemName: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(Theme.negative).padding(3).background(Theme.surface, in: Circle()).accessibilityHidden(true) }
+            }
             .overlay(alignment: .bottomTrailing) {
                 if failed {
                     Button { retry += 1 } label: {
-                        Image(systemName: "arrow.clockwise.circle.fill").font(.body).foregroundStyle(Theme.text)
-                            .padding(4).background(Theme.surface, in: Circle()).frame(width: 44, height: 44)
-                    }.buttonStyle(.borderless).accessibilityLabel("重试加载\(store.augments[id]?.name ?? "海克斯")图标")
+                        Image(systemName: "arrow.clockwise.circle.fill").foregroundStyle(Theme.text).padding(4).background(Theme.surface, in: Circle()).frame(width: 44, height: 44)
+                    }.buttonStyle(.borderless).accessibilityLabel("重试加载\(request.name)图标")
                 }
             }
             .accessibilityElement(children: .contain)
-            .task(id: identity) {
+            .task(id: request.identity + "|\(retry)") {
                 image = nil; failed = false
-                guard let augment = store.augments[id], !id.isEmpty else { return }
                 do {
-                    let bytes = try await AugmentIconCache.shared.image(id: id, name: augment.name, rarity: rarity, version: store.dataset?.manifest.patch ?? "latest", force: retry > 0)
+                    let bytes = try await ResourceIconCache.shared.image(request, force: retry > 0)
                     try Task.checkCancellation()
-                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) { image = UIImage(data: bytes) }
+                    guard let decoded = UIImage(data: bytes) else { throw ResourceIconCache.Failure.invalidResponse }
+                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) { image = decoded }
                 } catch { if !Task.isCancelled { failed = true } }
             }
+    }
+}
+struct AugmentIcon: View {
+    @Environment(AppStore.self) private var store
+    let id: String
+    let rarity: String
+    var size: CGFloat = 48
+    var body: some View {
+        ResourceIcon(request: ResourceIconRequest(kind: .augment, id: "riot:" + id, name: store.augments[id]?.name ?? "海克斯", rarity: rarity, version: store.dataset?.manifest.patch ?? "latest", url: nil), size: size)
     }
 }
 @MainActor

@@ -183,6 +183,7 @@ struct HeroDetailView: View {
                         ForEach(reference.items.indices, id: \.self) { i in
                             let item = reference.items[i]
                             HStack {
+                                EquipmentIcon(id: item.item, name: item.name, version: store.dataset?.manifest.patch ?? "latest")
                                 Text(item.name); Spacer()
                                 if reference.showWinrate == true { Text(percent(item.games > 0 ? Double(item.wins) / Double(item.games) : nil)).monospacedDigit() }
                                 if reference.showSampleSize == true { Text("\(item.games) 局").foregroundStyle(Theme.secondary) }
